@@ -17,7 +17,8 @@ const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 минут
   max: 100 // максимум 100 запросов
 });
-
+// Доверие прокси (Nginx)
+app.set('trust proxy', 1);
 app.use(limiter);
 // Middleware
 app.use(cors());
