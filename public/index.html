@@ -8,9 +8,23 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
+  <script src="https://unpkg.com/jwt-decode/build/jwt-decode.js"></script>
   <script src="/js/mock-auth.js"></script>
 </head>
 <body>
+  <div id="authLoader" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 9999; display: flex; justify-content: center; align-items: center;">
+  <div style="text-align: center;">
+    <div style="font-size: 24px; margin-bottom: 20px;"> Авторизация...</div>
+    <div class="spinner" style="width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid #667eea; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto;"></div>
+  </div>
+</div>
+
+<style>
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+</style>
   <div class="container">
     <div class="header">
       <h1>🏆 Фэнтези Лига — Спортивный туризм</h1>
@@ -125,6 +139,63 @@
   </div>
 
   <script>
+    // Проверка авторизации при загрузке
+async function checkVKAuth() {
+  // Проверяем токен из URL
+  const urlParams = new URLSearchParams(window.location.search);
+  const token = urlParams.get('token');
+  
+  if (token) {
+    localStorage.setItem('vk_token', token);
+    window.history.replaceState({}, '', '/');
+  }
+  
+  const savedToken = localStorage.getItem('vk_token');
+  
+  if (!savedToken) {
+    // Перенаправляем на авторизацию
+    window.location.href = '/auth/vk';
+    return null;
+  }
+  
+  try {
+    const res = await fetch('/auth/me', {
+      headers: { 'Authorization': `Bearer ${savedToken}` }
+    });
+    
+    if (res.ok) {
+      const user = await res.json();
+      console.log('✅ Авторизован:', user.first_name, user.last_name);
+      document.getElementById('authLoader').style.display = 'none';
+      return user;
+    } else {
+      localStorage.removeItem('vk_token');
+      window.location.href = '/auth/vk';
+      return null;
+    }
+  } catch (error) {
+    console.error('Ошибка авторизации:', error);
+    localStorage.removeItem('vk_token');
+    window.location.href = '/auth/vk';
+    return null;
+  }
+}
+
+// Добавляем токен ко всем запросам
+async function apiRequest(url, options = {}) {
+  const token = localStorage.getItem('vk_token');
+  const headers = {
+    'Content-Type': 'application/json',
+    ...options.headers
+  };
+  
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  
+  const res = await fetch(url, { ...options, headers });
+  return res;
+}
     let currentTeam = null;
     let allPlayers = [];
     let teamPlayers = [];
@@ -133,8 +204,10 @@
     const rankOrder = ['МС', 'КМС', 'I', 'II', 'III'];
     let activeFilters = { gender: 'all', team: 'all', rank: 'all', search: '' };
 
-    function init() {
-      setupFilterListeners();
+    async function init() {
+  await checkVKAuth();
+  setupFilterListeners();
+  // остальные вызовы...
 
       document.getElementById('searchInput').addEventListener('input', (e) => {
         activeFilters.search = e.target.value.toLowerCase().trim();
@@ -192,11 +265,10 @@
         return;
       }
 
-      const res = await fetch('/api/teams', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_name: name })
-      });
+      const res = await apiRequest('/api/teams', {
+  method: 'POST',
+  body: JSON.stringify({ user_name: name })
+});
 
       if (res.ok) {
         currentTeam = await res.json();

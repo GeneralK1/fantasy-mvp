@@ -30,7 +30,7 @@ function requireAdmin(req, res, next) {
     
     // Проверяем, что VK ID совпадает с админским
     if (decoded.vk_id !== parseInt(process.env.ADMIN_VK_ID)) {
-      return res.status(403).json({ error: 'Доступ запрещен' });
+      return res.status(403).json({ error: 'Доступ запрещен. Требуются права администратора.' });
     }
     
     req.user = decoded;

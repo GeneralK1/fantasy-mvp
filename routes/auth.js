@@ -65,7 +65,12 @@ router.get('/callback', async (req, res) => {
 
     // Создаем JWT токен
     const token = jwt.sign(
-      { vk_id: user_id, first_name: vkUser.first_name, last_name: vkUser.last_name },
+      { 
+        vk_id: user_id, 
+        first_name: vkUser.first_name, 
+        last_name: vkUser.last_name,
+        photo: vkUser.photo_100
+      },
       process.env.JWT_SECRET,
       { expiresIn: '30d' }
     );
