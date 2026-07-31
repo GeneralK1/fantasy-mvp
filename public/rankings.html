@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Рейтинги - Фэнтези Лига</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🏆 Рейтинги Фэнтези Лиги</h1>
+      <nav>
+        <a href="/">👥 Сборка команды</a>
+        <a href="/events.html">📅 События</a>
+      </nav>
+    </div>
+
+    <!-- Текущее событие -->
+    <div class="card" id="currentEventCard">
+      <h2>🔥 Текущее событие</h2>
+      <div id="currentEventInfo"></div>
+    </div>
+
+    <!-- Рейтинг за текущее событие -->
+    <div class="card">
+      <h2>🏅 Рейтинг команд за текущее событие</h2>
+      <div id="currentRankings"></div>
+    </div>
+
+    <!-- Рейтинг за всё время -->
+    <div class="card">
+      <h2>👑 Рейтинг команд за всё время</h2>
+      <div id="allTimeRankings"></div>
+    </div>
+
+    <!-- Рейтинг спортсменов -->
+    <div class="card">
+      <h2>⭐ Рейтинг спортсменов</h2>
+      <div id="playerRankings"></div>
+    </div>
+  </div>
+
+  <script>
+    async function loadData() {
+      await Promise.all([
+        loadCurrentEvent(),
+        loadCurrentRankings(),
+        loadAllTimeRankings(),
+        loadPlayerRankings()
+      ]);
+    }
+
+    async function loadCurrentEvent() {
+      const res = await fetch('/api/rankings/current');
+      const data = await res.json();
+
+      const container = document.getElementById('currentEventInfo');
+
+      if (!data.event) {
+        container.innerHTML = '<p style="color: var(--text-muted); text-align: center; padding: 40px;">Нет активного события</p>';
+        return;
+      }
+
+      container.innerHTML = `
+        <div style="background: linear-gradient(135deg, rgba(139,92,246,0.15), rgba(59,130,246,0.1)); border: 1px solid rgba(139,92,246,0.2); color: var(--text-primary); padding: 24px; border-radius: 12px;">
+          <h3 style="font-size: 24px; margin-bottom: 12px; font-weight: 700;">${data.event.name}</h3>
+          ${data.event.description ? `<p style="margin-bottom: 12px; color: var(--text-secondary);">${data.event.description}</p>` : ''}
+          <p style="font-size: 14px; color: var(--text-muted);">
+            📅 ${formatDate(data.event.start_date)} — ${formatDate(data.event.end_date)}
+          </p>
+        </div>
+      `;
+    }
+
+    async function loadCurrentRankings() {
+      const res = await fetch('/api/rankings/current');
+      const data = await res.json();
+
+      const container = document.getElementById('currentRankings');
+
+      if (!data.event || data.rankings.length === 0) {
+        container.innerHTML = '<p style="color: var(--text-muted); text-align: center; padding: 40px;">Пока нет зарегистрированных команд</p>';
+        return;
+      }
+
+      container.innerHTML = `
+        <table class="ranking-table">
+          <thead>
+            <tr>
+              <th>Место</th>
+              <th>Команда</th>
+              <th>Очки</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${data.rankings.map((r, i) => `
+              <tr class="${i < 3 ? 'top-three' : ''}">
+                <td>${getMedal(i + 1)}</td>
+                <td>${r.user_name}</td>
+                <td><strong>${r.total_points}</strong></td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `;
+    }
+
+    async function loadAllTimeRankings() {
+      const res = await fetch('/api/rankings/all-time');
+      const rankings = await res.json();
+
+      const container = document.getElementById('allTimeRankings');
+
+      if (rankings.length === 0) {
+        container.innerHTML = '<p style="color: var(--text-muted); text-align: center; padding: 40px;">Пока нет данных</p>';
+        return;
+      }
+
+      container.innerHTML = `
+        <table class="ranking-table">
+          <thead>
+            <tr>
+              <th>Место</th>
+              <th>Команда</th>
+              <th>Очки</th>
+              <th>Событий</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rankings.map((r, i) => `
+              <tr class="${i < 3 ? 'top-three' : ''}">
+                <td>${getMedal(i + 1)}</td>
+                <td>${r.user_name}</td>
+                <td><strong>${r.total_points}</strong></td>
+                <td>${r.events_count}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `;
+    }
+
+    async function loadPlayerRankings() {
+      const res = await fetch('/api/rankings/players');
+      const rankings = await res.json();
+
+      const container = document.getElementById('playerRankings');
+
+      if (rankings.length === 0) {
+        container.innerHTML = '<p style="color: var(--text-muted); text-align: center; padding: 40px;">Пока нет данных</p>';
+        return;
+      }
+
+      container.innerHTML = `
+        <table class="ranking-table">
+          <thead>
+            <tr>
+              <th>Место</th>
+              <th>Спортсмен</th>
+              <th>Команда</th>
+              <th>Разряд</th>
+              <th>Очки</th>
+              <th>Событий</th>
+              <th>Среднее</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rankings.map((r, i) => `
+              <tr class="${i < 3 ? 'top-three' : ''}">
+                <td>${getMedal(i + 1)}</td>
+                <td>${r.full_name} ${r.gender === 'male' ? '♂' : '♀'}</td>
+                <td>${r.team}</td>
+                <td>${r.rank}</td>
+                <td><strong>${r.total_points}</strong></td>
+                <td>${r.events_count}</td>
+                <td>${r.avg_points.toFixed(1)}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `;
+    }
+
+    function formatDate(dateStr) {
+      const date = new Date(dateStr);
+      return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
+    }
+
+    function getMedal(place) {
+      if (place === 1) return '🥇';
+      if (place === 2) return '🥈';
+      if (place === 3) return '🥉';
+      return place;
+    }
+
+    loadData();
+  </script>
+</body>
+</html>

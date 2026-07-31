@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Сборка команды - Фэнтези Лига</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script src="/js/mock-auth.js"></script>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🏆 Фэнтези Лига — Спортивный туризм</h1>
+      <nav>
+        <a href="/rankings.html">🏅 Рейтинги</a>
+        <a href="/events.html">📅 События</a>
+        <a href="/admin.html">⚙️ Админ-панель</a>
+      </nav>
+    </div>
+
+    <!-- Шаг 1: Создание команды -->
+    <div class="card" id="teamSetup">
+      <h2>👥 Шаг 1: Создание команды</h2>
+      <div id="alert"></div>
+
+      <div id="currentEventInfo" style="margin-bottom: 24px;">
+        <p style="color: var(--text-muted);">Загрузка информации о событии...</p>
+      </div>
+
+      <div class="form-row">
+        <input type="text" id="teamName" placeholder="Название вашей команды" style="flex: 1;">
+        <button class="btn btn-primary" onclick="createTeam()">Создать команду</button>
+      </div>
+      <p style="margin-top: 12px; color: var(--text-muted); font-size: 13px;">
+        После создания вы сможете добавить спортсменов и зарегистрировать команду.
+      </p>
+    </div>
+
+    <!-- Шаг 2: Сборка и регистрация команды -->
+    <div id="teamBuilder" class="hidden">
+      <!-- Статистика -->
+      <div class="stats-bar">
+        <div class="stat-box">
+          <h3>Команда</h3>
+          <div class="value" id="teamNameDisplay" style="font-size: 18px;">—</div>
+        </div>
+        <div class="stat-box">
+          <h3>Мужчины</h3>
+          <div class="value"><span id="maleCount">0</span>/4</div>
+        </div>
+        <div class="stat-box">
+          <h3>Женщины</h3>
+          <div class="value"><span id="femaleCount">0</span>/4</div>
+        </div>
+        <div class="stat-box">
+          <h3>Всего</h3>
+          <div class="value"><span id="totalCount">0</span>/8</div>
+        </div>
+      </div>
+
+      <!-- Кнопка регистрации (появляется только когда 8 человек) -->
+      <div class="card" id="registrationBlock" style="display: none;">
+        <h2>✅ Команда собрана!</h2>
+        <p style="margin-bottom: 20px; color: var(--text-secondary);">Вы набрали 8 спортсменов. Теперь команду можно зарегистрировать на активное событие.</p>
+        <button class="btn" style="font-weight: bold; font-size: 16px; padding: 14px 32px;" onclick="registerTeam()">🚀 Зарегистрировать на событие</button>
+      </div>
+
+      <div class="card" id="alreadyRegisteredBlock" style="display: none;">
+        <h2>✅ Команда успешно зарегистрирована!</h2>
+        <p>Состав зафиксирован и отправлен на текущее событие. Изменить его больше нельзя.</p>
+      </div>
+
+      <!-- Текущий состав -->
+      <div class="card">
+        <h2>📋 Ваш состав</h2>
+        <div id="currentTeam">
+          <p style="color: var(--text-muted);">Команда пуста. Добавьте спортсменов ниже.</p>
+        </div>
+      </div>
+
+      <!-- Список доступных спортсменов -->
+      <div class="card">
+        <h2>👥 Доступные спортсмены</h2>
+
+        <div class="search-box">
+          <input type="text" id="searchInput" placeholder="🔍 Поиск по имени, команде или разряду...">
+        </div>
+
+        <div class="filters-section">
+          <div class="filter-group">
+            <label>Пол</label>
+            <div class="filter-bar" id="genderFilters">
+              <button class="filter-btn active" data-filter="gender" data-value="all">Все</button>
+              <button class="filter-btn" data-filter="gender" data-value="male">Мужчины</button>
+              <button class="filter-btn" data-filter="gender" data-value="female">Женщины</button>
+            </div>
+          </div>
+
+          <div class="filter-group">
+            <label>Команда</label>
+            <div class="filter-bar" id="teamFilters">
+              <button class="filter-btn active" data-filter="team" data-value="all">Все</button>
+            </div>
+          </div>
+
+          <div class="filter-group">
+            <label>Разряд</label>
+            <div class="filter-bar" id="rankFilters">
+              <button class="filter-btn active" data-filter="rank" data-value="all">Все</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="reset-filters">
+          <button class="btn btn-danger" id="resetBtn">🔄 Сбросить фильтры</button>
+          <span id="resultsCount" style="margin-left: 12px; color: var(--text-muted); font-size: 13px;"></span>
+        </div>
+
+        <div id="playersList" class="players-grid"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let currentTeam = null;
+    let allPlayers = [];
+    let teamPlayers = [];
+    let isRegistered = false;
+
+    const rankOrder = ['МС', 'КМС', 'I', 'II', 'III'];
+    let activeFilters = { gender: 'all', team: 'all', rank: 'all', search: '' };
+
+    function init() {
+      setupFilterListeners();
+
+      document.getElementById('searchInput').addEventListener('input', (e) => {
+        activeFilters.search = e.target.value.toLowerCase().trim();
+        applyFilters();
+      });
+
+      document.getElementById('resetBtn').addEventListener('click', resetFilters);
+      loadCurrentEvent();
+    }
+
+    function setupFilterListeners() {
+      ['genderFilters', 'teamFilters', 'rankFilters'].forEach(groupId => {
+        const container = document.getElementById(groupId);
+        container.addEventListener('click', (e) => {
+          if (e.target.classList.contains('filter-btn')) {
+            setFilter(e.target.dataset.filter, e.target.dataset.value, e.target);
+          }
+        });
+      });
+    }
+
+    async function loadCurrentEvent() {
+      try {
+        const res = await fetch('/api/events/current');
+        const event = await res.json();
+        const container = document.getElementById('currentEventInfo');
+
+        if (!event) {
+          container.innerHTML = '<div style="background: rgba(239,68,68,0.1); color: #f87171; padding: 16px; border-radius: 10px; border: 1px solid rgba(239,68,68,0.2);">⚠️ Нет активного события. Создание команд пока невозможно.</div>';
+          return;
+        }
+
+        const now = new Date().toISOString().split('T')[0];
+        const isRegistrationOpen = now >= event.registration_start && now <= event.registration_end;
+
+        container.innerHTML = `
+          <div style="background: linear-gradient(135deg, rgba(139,92,246,0.15), rgba(59,130,246,0.1)); border: 1px solid rgba(139,92,246,0.2); color: var(--text-primary); padding: 24px; border-radius: 12px; margin-bottom: 20px;">
+            <h3 style="font-size: 22px; margin-bottom: 12px; font-weight: 700;">${event.name}</h3>
+            ${event.description ? `<p style="margin-bottom: 12px; color: var(--text-secondary);">${event.description}</p>` : ''}
+            <p style="font-size: 14px; color: var(--text-muted); margin-bottom: 6px;">📅 Даты события: ${formatDate(event.event_start_date)} — ${formatDate(event.event_end_date)}</p>
+            <p style="font-size: 14px; color: var(--text-muted);">📝 Регистрация: ${formatDate(event.registration_start)} — ${formatDate(event.registration_end)}</p>
+            ${!isRegistrationOpen ? '<p style="margin-top: 12px; font-weight: 700; color: var(--accent-orange);">⚠️ Регистрация закрыта</p>' : ''}
+          </div>
+        `;
+      } catch (error) {
+        console.error('Ошибка загрузки события:', error);
+      }
+    }
+
+    // ШАГ 1: Просто создаём команду
+    async function createTeam() {
+      const name = document.getElementById('teamName').value.trim();
+      if (!name) {
+        showAlert('Введите название команды', 'error');
+        return;
+      }
+
+      const res = await fetch('/api/teams', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_name: name })
+      });
+
+      if (res.ok) {
+        currentTeam = await res.json();
+        document.getElementById('teamSetup').classList.add('hidden');
+        document.getElementById('teamBuilder').classList.remove('hidden');
+        document.getElementById('teamNameDisplay').textContent = currentTeam.user_name;
+        await loadPlayers();
+        showAlert('Команда создана! Теперь добавьте 8 спортсменов.', 'success');
+      } else {
+        const err = await res.json();
+        showAlert(err.error, 'error');
+      }
+    }
+
+    // ШАГ 2: Регистрация собранной команды
+    async function registerTeam() {
+      if (!confirm('Вы уверены? После регистрации состав команды изменить будет нельзя!')) return;
+
+      const res = await fetch(`/api/teams/${currentTeam.id}/register`, { method: 'POST' });
+
+      if (res.ok) {
+        isRegistered = true;
+        document.getElementById('registrationBlock').style.display = 'none';
+        document.getElementById('alreadyRegisteredBlock').style.display = 'block';
+        showAlert('Команда успешно зарегистрирована на событие!', 'success');
+      } else {
+        const err = await res.json();
+        showAlert(err.error, 'error');
+      }
+    }
+
+    async function loadPlayers() {
+      const res = await fetch('/api/players');
+      allPlayers = await res.json();
+      buildFilterButtons();
+      applyFilters();
+    }
+
+    function buildFilterButtons() {
+      const teams = [...new Set(allPlayers.map(p => p.team))].sort();
+      const teamContainer = document.getElementById('teamFilters');
+      teamContainer.innerHTML = '';
+      teamContainer.appendChild(createFilterButton('team', 'all', 'Все', true));
+      teams.forEach(t => teamContainer.appendChild(createFilterButton('team', t, t, false)));
+
+      const rankContainer = document.getElementById('rankFilters');
+      rankContainer.innerHTML = '';
+      rankContainer.appendChild(createFilterButton('rank', 'all', 'Все', true));
+      rankOrder.forEach(r => {
+        if (allPlayers.some(p => p.rank === r)) {
+          rankContainer.appendChild(createFilterButton('rank', r, r, false));
+        }
+      });
+    }
+
+    function createFilterButton(filterName, value, text, isActive) {
+      const btn = document.createElement('button');
+      btn.className = 'filter-btn' + (isActive ? ' active' : '');
+      btn.dataset.filter = filterName;
+      btn.dataset.value = value;
+      btn.textContent = text;
+      return btn;
+    }
+
+    function setFilter(filterName, value, clickedBtn) {
+      activeFilters[filterName] = value;
+      const group = clickedBtn.parentElement;
+      group.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      clickedBtn.classList.add('active');
+      applyFilters();
+    }
+
+    function applyFilters() {
+      let filtered = allPlayers.filter(p => {
+        if (activeFilters.gender !== 'all' && p.gender !== activeFilters.gender) return false;
+        if (activeFilters.team !== 'all' && p.team !== activeFilters.team) return false;
+        if (activeFilters.rank !== 'all' && p.rank !== activeFilters.rank) return false;
+        if (activeFilters.search && !(`${p.full_name} ${p.team} ${p.rank}`.toLowerCase().includes(activeFilters.search))) return false;
+        return true;
+      });
+
+      filtered = filtered.filter(p => !teamPlayers.find(tp => tp.id === p.id));
+      renderPlayers(filtered);
+    }
+
+    function resetFilters() {
+      activeFilters = { gender: 'all', team: 'all', rank: 'all', search: '' };
+      document.getElementById('searchInput').value = '';
+      document.querySelectorAll('.filter-bar').forEach(bar => {
+        bar.querySelectorAll('.filter-btn').forEach((btn, idx) => btn.classList.toggle('active', idx === 0));
+      });
+      applyFilters();
+    }
+
+    function renderPlayers(players) {
+      const list = document.getElementById('playersList');
+      document.getElementById('resultsCount').textContent = `Найдено: ${players.length}`;
+
+      if (players.length === 0) {
+        list.innerHTML = '<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center; padding: 40px;">Нет доступных спортсменов</p>';
+        return;
+      }
+
+      list.innerHTML = players.map(p => `
+        <div class="player-card gender-${p.gender}">
+          <div class="player-info">
+            <h3>${p.full_name}</h3>
+            <p>📅 ${p.birth_year} г.р.</p>
+            <p>🏃 ${p.team}</p>
+            <p>🏆 ${p.rank}</p>
+            <p>${p.gender === 'male' ? '♂ Мужчина' : '♀ Женщина'}</p>
+          </div>
+          <button class="btn btn-success" onclick="addPlayer(${p.id})">Добавить</button>
+        </div>
+      `).join('');
+    }
+
+    async function addPlayer(playerId) {
+      const res = await fetch(`/api/teams/${currentTeam.id}/players`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ player_id: playerId })
+      });
+
+      if (res.ok) {
+        await loadTeam();
+        applyFilters();
+      } else {
+        const err = await res.json();
+        showAlert(err.error, 'error');
+      }
+    }
+
+    async function removePlayer(playerId) {
+      if (isRegistered) {
+        showAlert('Нельзя удалить спортсмена из зарегистрированной команды!', 'error');
+        return;
+      }
+      await fetch(`/api/teams/${currentTeam.id}/players/${playerId}`, { method: 'DELETE' });
+      await loadTeam();
+      applyFilters();
+    }
+
+    async function loadTeam() {
+      const res = await fetch(`/api/teams/${currentTeam.id}`);
+      const team = await res.json();
+      teamPlayers = team.players;
+
+      const males = teamPlayers.filter(p => p.gender === 'male').length;
+      const females = teamPlayers.filter(p => p.gender === 'female').length;
+      const total = teamPlayers.length;
+
+      document.getElementById('maleCount').textContent = males;
+      document.getElementById('femaleCount').textContent = females;
+      document.getElementById('totalCount').textContent = total;
+
+      const teamDiv = document.getElementById('currentTeam');
+      if (total === 0) {
+        teamDiv.innerHTML = '<p style="color: var(--text-muted);">Команда пуста. Добавьте спортсменов ниже.</p>';
+      } else {
+        teamDiv.innerHTML = teamPlayers.map(p => `
+          <div class="team-slot filled">
+            <div class="player-info">
+              <h3>${p.full_name}</h3>
+              <p>${p.team} • ${p.rank} • ${p.gender === 'male' ? '♂' : '♀'}</p>
+            </div>
+            <button class="btn btn-danger" onclick="removePlayer(${p.id})" ${isRegistered ? 'disabled style="opacity:0.5;cursor:not-allowed;"' : ''}>
+              ${isRegistered ? 'Зафиксирован' : 'Удалить'}
+            </button>
+          </div>
+        `).join('');
+      }
+
+      // Показываем кнопку регистрации только если 8 человек и ещё не зарегистрированы
+      if (total === 8 && !isRegistered) {
+        document.getElementById('registrationBlock').style.display = 'block';
+      } else {
+        document.getElementById('registrationBlock').style.display = 'none';
+      }
+    }
+
+    function showAlert(msg, type) {
+      const el = document.getElementById('alert');
+      el.innerHTML = `<div class="alert alert-${type}">${msg}</div>`;
+      setTimeout(() => el.innerHTML = '', 3000);
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    function formatDate(dateStr) {
+      const date = new Date(dateStr);
+      return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
+    }
+
+    init();
+  </script>
+</body>
+</html>

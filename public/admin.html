@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Админ-панель - Фэнтези Лига</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>⚙️ Админ-панель</h1>
+      <nav>
+        <a href="/">👥 Сборка команды</a>
+        <a href="/events.html">📅 События</a>
+      </nav>
+    </div>
+
+    <!-- Вкладки -->
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="players">👤 Спортсмены</button>
+      <button class="tab-btn" data-tab="events">📅 События</button>
+      <button class="tab-btn" data-tab="results">📊 Результаты</button>
+    </div>
+
+    <!-- Вкладка: Спортсмены -->
+    <div class="tab-content" id="tab-players">
+      <div class="card">
+        <h2>➕ Добавить спортсмена</h2>
+        <div id="alert-players"></div>
+        <form id="playerForm">
+          <div class="form-row">
+            <input type="text" id="fullName" placeholder="ФИО" required>
+            <input type="number" id="birthYear" placeholder="Год рождения" min="1950" max="2015" required>
+            <input type="text" id="team" placeholder="Команда" required>
+            <select id="rank" required>
+              <option value="">Выберите разряд</option>
+              <option value="МС">МС</option>
+              <option value="КМС">КМС</option>
+              <option value="I">I</option>
+              <option value="II">II</option>
+              <option value="III">III</option>
+            </select>
+            <select id="gender" required>
+              <option value="">Пол</option>
+              <option value="male">Мужской</option>
+              <option value="female">Женский</option>
+            </select>
+          </div>
+          <button type="submit" class="btn btn-primary">Добавить спортсмена</button>
+        </form>
+      </div>
+
+      <div class="card">
+        <h2>📋 Список спортсменов (<span id="count">0</span>)</h2>
+        <div class="filter-bar">
+          <button class="filter-btn active" data-filter="all">Все</button>
+          <button class="filter-btn" data-filter="male">Мужчины</button>
+          <button class="filter-btn" data-filter="female">Женщины</button>
+        </div>
+        <div id="playersList" class="players-grid"></div>
+      </div>
+    </div>
+
+    <!-- Вкладка: События -->
+    <div class="tab-content hidden" id="tab-events">
+      <div class="card">
+        <h2>➕ Создать событие</h2>
+        <div id="alert-events"></div>
+        <form id="eventForm">
+          <div class="form-row">
+            <input type="text" id="eventName" placeholder="Название события" required>
+          </div>
+          <div class="form-row">
+            <input type="text" id="eventDescription" placeholder="Описание (необязательно)">
+          </div>
+          <h3 style="margin: 24px 0 12px 0; color: var(--accent-purple);">📅 Даты события</h3>
+          <div class="form-row">
+            <input type="date" id="eventStart" required>
+            <input type="date" id="eventEnd" required>
+          </div>
+          <h3 style="margin: 24px 0 12px 0; color: var(--accent-green);">📝 Даты регистрации команд</h3>
+          <div class="form-row">
+            <input type="date" id="regStart" required>
+            <input type="date" id="regEnd" required>
+          </div>
+          <button type="submit" class="btn btn-primary" style="margin-top: 8px;">Создать событие</button>
+        </form>
+      </div>
+
+      <div class="card">
+        <h2>📅 Все события</h2>
+        <div id="eventsList"></div>
+      </div>
+
+      <div class="card hidden" id="eventDetails">
+        <h2 id="eventDetailsTitle">Детали события</h2>
+        <div id="eventDetailsContent"></div>
+      </div>
+    </div>
+
+    <!-- Вкладка: Результаты -->
+    <div class="tab-content hidden" id="tab-results">
+      <div class="card">
+        <h2>📊 Импорт результатов события</h2>
+        <div id="alert-results"></div>
+
+        <div style="margin-bottom: 24px;">
+          <label style="display: block; margin-bottom: 10px; font-weight: 600; color: var(--text-secondary);">Выберите событие:</label>
+          <select id="eventSelect" style="width: 100%;">
+            <option value="">Загрузка...</option>
+          </select>
+        </div>
+
+        <div style="margin-bottom: 24px;">
+          <label style="display: block; margin-bottom: 10px; font-weight: 600; color: var(--text-secondary);">Формат CSV:</label>
+          <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 12px; line-height: 1.6;">
+            <strong style="color: var(--text-secondary);">ФИО,Личка_кор,Личка_длин,Связка_кор,Связка_длин,Группа_кор,Группа_длин</strong><br>
+            Пример:<br>
+            Иванов Иван Иванович,25,30,20,25,15,20<br>
+            Петрова Мария,0,0,0,0,0,0 (если не финишировал)
+          </p>
+          <textarea id="csvResults" rows="10" style="width: 100%; font-family: 'JetBrains Mono', 'Fira Code', monospace; font-size: 13px;" placeholder="ФИО,Личка_кор,Личка_длин,Связка_кор,Связка_длин,Группа_кор,Группа_длин
+Иванов Иван Иванович,25,30,20,25,15,20
+Петрова Мария Сергеевна,20,25,15,20,10,15
+Сидоров Петр,0,0,0,0,0,0"></textarea>
+        </div>
+
+        <div style="display: flex; gap: 12px; margin-bottom: 24px; flex-wrap: wrap;">
+          <button class="btn btn-primary" onclick="importResults()">💾 Импортировать результаты</button>
+          <button class="btn btn-success" onclick="downloadTemplate()">📥 Скачать шаблон</button>
+        </div>
+
+        <div id="importStats" style="display: none; padding: 20px; background: rgba(16, 185, 129, 0.08); border-radius: 12px; border: 1px solid rgba(16, 185, 129, 0.2);">
+          <h3 style="margin-bottom: 14px; color: var(--accent-green); font-size: 16px;">📊 Статистика импорта:</h3>
+          <div id="importStatsContent"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Переключение вкладок
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+        btn.classList.add('active');
+        document.getElementById('tab-' + btn.dataset.tab).classList.remove('hidden');
+
+        // Если открыли вкладку результатов - загружаем события
+        if (btn.dataset.tab === 'results') {
+          loadEventsForImport();
+        }
+      });
+    });
+
+    // ============ СПОРТСМЕНЫ ============
+    let currentFilter = 'all';
+    let allPlayers = [];
+
+    async function loadPlayers() {
+      const res = await fetch('/api/players');
+      allPlayers = await res.json();
+      renderPlayers();
+      document.getElementById('count').textContent = allPlayers.length;
+    }
+
+    function renderPlayers() {
+      const list = document.getElementById('playersList');
+      const filtered = currentFilter === 'all' ? allPlayers : allPlayers.filter(p => p.gender === currentFilter);
+
+      if (filtered.length === 0) {
+        list.innerHTML = '<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center; padding: 40px;">Нет спортсменов</p>';
+        return;
+      }
+
+      list.innerHTML = filtered.map(p => `
+        <div class="player-card gender-${p.gender}">
+          <div class="player-info">
+            <h3>${p.full_name}</h3>
+            <p>📅 ${p.birth_year} г.р.</p>
+            <p>🏃 ${p.team}</p>
+            <p>🏆 ${p.rank}</p>
+            <p>${p.gender === 'male' ? '♂ Мужчина' : '♀ Женщина'}</p>
+          </div>
+          <button class="btn btn-danger" onclick="deletePlayer(${p.id})">Удалить</button>
+        </div>
+      `).join('');
+    }
+
+    document.getElementById('playerForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const data = {
+        full_name: document.getElementById('fullName').value,
+        birth_year: parseInt(document.getElementById('birthYear').value),
+        team: document.getElementById('team').value,
+        rank: document.getElementById('rank').value,
+        gender: document.getElementById('gender').value
+      };
+
+      const res = await fetch('/api/players', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+
+      if (res.ok) {
+        showAlert('alert-players', 'Спортсмен добавлен!', 'success');
+        e.target.reset();
+        loadPlayers();
+      } else {
+        const err = await res.json();
+        showAlert('alert-players', err.error, 'error');
+      }
+    });
+
+    async function deletePlayer(id) {
+      if (!confirm('Удалить спортсмена?')) return;
+      await fetch(`/api/players/${id}`, { method: 'DELETE' });
+      loadPlayers();
+    }
+
+    document.querySelectorAll('#tab-players .filter-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('#tab-players .filter-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentFilter = btn.dataset.filter;
+        renderPlayers();
+      });
+    });
+
+    // ============ СОБЫТИЯ ============
+    let allEvents = [];
+
+    async function loadEvents() {
+      const res = await fetch('/api/events');
+      allEvents = await res.json();
+      renderEvents();
+    }
+
+    function renderEvents() {
+      const list = document.getElementById('eventsList');
+      if (allEvents.length === 0) {
+        list.innerHTML = '<p style="color: var(--text-muted); text-align: center; padding: 40px;">Нет событий</p>';
+        return;
+      }
+
+      list.innerHTML = allEvents.map(e => `
+        <div class="event-card ${e.status}">
+          <div style="flex: 1;">
+            <h3 style="font-size: 17px; font-weight: 700; margin-bottom: 6px;">${e.name}</h3>
+            <p style="color: var(--text-muted); font-size: 14px;">${e.description || ''}</p>
+            <p style="font-size: 13px; color: var(--accent-purple); margin-top: 8px;">
+              📅 Событие: ${formatDate(e.event_start_date)} — ${formatDate(e.event_end_date)}
+            </p>
+            <p style="font-size: 13px; color: var(--accent-green); margin-top: 4px;">
+              📝 Регистрация: ${formatDate(e.registration_start)} — ${formatDate(e.registration_end)}
+            </p>
+          </div>
+          <div class="event-actions">
+            <span class="event-status status-${e.status}">
+              ${e.status === 'active' ? '🔥 Активно' : e.status === 'completed' ? '✅ Завершено' : '⏳ Предстоит'}
+            </span>
+            <button class="btn btn-primary btn-sm" onclick="viewEvent(${e.id})">👁️ Детали</button>
+            ${e.status !== 'active' ? `<button class="btn btn-success btn-sm" onclick="activateEvent(${e.id})">▶️ Активировать</button>` : ''}
+            ${e.status !== 'completed' && e.status === 'active' ? `<button class="btn btn-danger btn-sm" onclick="completeEvent(${e.id})">✅ Завершить</button>` : ''}
+            <button class="btn btn-danger btn-sm" onclick="deleteEvent(${e.id})">🗑️</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    document.getElementById('eventForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const data = {
+        name: document.getElementById('eventName').value,
+        description: document.getElementById('eventDescription').value,
+        event_start_date: document.getElementById('eventStart').value,
+        event_end_date: document.getElementById('eventEnd').value,
+        registration_start: document.getElementById('regStart').value,
+        registration_end: document.getElementById('regEnd').value
+      };
+
+      const res = await fetch('/api/events', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+
+      if (res.ok) {
+        showAlert('alert-events', 'Событие создано!', 'success');
+        e.target.reset();
+        loadEvents();
+      } else {
+        const err = await res.json();
+        showAlert('alert-events', err.error, 'error');
+      }
+    });
+
+    async function activateEvent(id) {
+      if (!confirm('Активировать это событие?')) return;
+      await fetch(`/api/events/${id}/activate`, { method: 'POST' });
+      loadEvents();
+    }
+
+    async function completeEvent(id) {
+      if (!confirm('Завершить событие?')) return;
+      await fetch(`/api/events/${id}/complete`, { method: 'POST' });
+      loadEvents();
+    }
+
+    async function deleteEvent(id) {
+      if (!confirm('Удалить событие?')) return;
+      await fetch(`/api/events/${id}`, { method: 'DELETE' });
+      document.getElementById('eventDetails').classList.add('hidden');
+      loadEvents();
+    }
+
+    async function viewEvent(id) {
+      const res = await fetch(`/api/events/${id}/details`);
+      const data = await res.json();
+
+      document.getElementById('eventDetailsTitle').textContent = `📋 ${data.event.name}`;
+      document.getElementById('eventDetails').classList.remove('hidden');
+
+      let html = '<h3 style="margin-top: 24px; margin-bottom: 16px; color: var(--text-secondary);">🏆 Зарегистрированные команды</h3>';
+      if (data.teams.length === 0) {
+        html += '<p style="color: var(--text-muted);">Нет зарегистрированных команд</p>';
+      } else {
+        html += `<table class="ranking-table"><thead><tr><th>Место</th><th>Команда</th><th>Очки</th></tr></thead><tbody>`;
+        html += data.teams.map((t, i) => `<tr><td>${getMedal(i + 1)}</td><td>${t.user_name}</td><td><strong>${t.total_points}</strong></td></tr>`).join('');
+        html += '</tbody></table>';
+      }
+
+      document.getElementById('eventDetailsContent').innerHTML = html;
+      document.getElementById('eventDetails').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    // ============ ИМПОРТ РЕЗУЛЬТАТОВ ============
+    async function loadEventsForImport() {
+      try {
+        const res = await fetch('/api/events');
+        const events = await res.json();
+
+        const select = document.getElementById('eventSelect');
+        const activeOrCompleted = events.filter(e => e.status === 'active' || e.status === 'completed');
+
+        if (activeOrCompleted.length === 0) {
+          select.innerHTML = '<option value="">Нет активных или завершенных событий</option>';
+        } else {
+          select.innerHTML = activeOrCompleted.map(e => 
+            `<option value="${e.id}">${e.name} (${e.status === 'active' ? 'активно' : 'завершено'})</option>`
+          ).join('');
+        }
+      } catch (error) {
+        console.error('Ошибка загрузки событий:', error);
+      }
+    }
+
+    async function importResults() {
+      const eventId = document.getElementById('eventSelect').value;
+      const csvData = document.getElementById('csvResults').value.trim();
+
+      if (!eventId) {
+        showAlert('alert-results', 'Выберите событие', 'error');
+        return;
+      }
+
+      if (!csvData) {
+        showAlert('alert-results', 'Вставьте CSV данные', 'error');
+        return;
+      }
+
+      // Парсим CSV
+      const lines = csvData.split('\n').filter(line => line.trim());
+      const results = [];
+      const errors = [];
+      const warnings = [];
+      let stats = { total: 0, imported: 0, updated: 0, notFound: 0 };
+
+      // Пропускаем заголовок если есть
+      const startIndex = lines[0].toLowerCase().includes('фами') || lines[0].toLowerCase().includes('fio') ? 1 : 0;
+
+      for (let i = startIndex; i < lines.length; i++) {
+        stats.total++;
+        const line = lines[i].trim();
+        const parts = line.split(',').map(p => p.trim());
+
+        if (parts.length < 7) {
+          errors.push(`Строка ${i + 1}: недостаточно данных (ожидалось 7 колонок, получено ${parts.length})`);
+          continue;
+        }
+
+        const [fullName, indShort, indLong, tieShort, tieLong, groupShort, groupLong] = parts;
+
+        // Ищем спортсмена
+        const player = allPlayers.find(p => p.full_name.toLowerCase() === fullName.toLowerCase());
+
+        if (!player) {
+          warnings.push(`Строка ${i + 1}: спортсмен "${fullName}" не найден`);
+          stats.notFound++;
+          continue;
+        }
+
+        results.push({
+          player_id: player.id,
+          individual_short: parseInt(indShort) || 0,
+          individual_long: parseInt(indLong) || 0,
+          tie_short: parseInt(tieShort) || 0,
+          tie_long: parseInt(tieLong) || 0,
+          group_short: parseInt(groupShort) || 0,
+          group_long: parseInt(groupLong) || 0
+        });
+
+        stats.imported++;
+      }
+
+      if (results.length === 0) {
+        showAlert('alert-results', 'Нет данных для импорта', 'error');
+        return;
+      }
+
+      // Отправляем на сервер
+      try {
+        const res = await fetch(`/api/events/${eventId}/results`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ results })
+        });
+
+        if (res.ok) {
+          let html = `
+            <p><strong style="color: var(--text-primary);">✅ Всего строк:</strong> ${stats.total}</p>
+            <p><strong style="color: var(--text-primary);">✅ Импортировано:</strong> ${stats.imported}</p>
+          `;
+
+          if (warnings.length > 0) {
+            html += `<details style="margin-top: 14px;"><summary style="cursor: pointer; color: var(--accent-orange); font-weight: 600;">⚠️ Предупреждения (${warnings.length})</summary><div style="margin-top: 12px; max-height: 200px; overflow-y: auto; font-size: 12px;">${warnings.map(w => `<div style="padding: 8px; background: rgba(245,158,11,0.08); border-left: 3px solid var(--accent-orange); margin-bottom: 6px; border-radius: 0 6px 6px 0;">${w}</div>`).join('')}</div></details>`;
+          }
+
+          if (errors.length > 0) {
+            html += `<details style="margin-top: 14px;"><summary style="cursor: pointer; color: var(--accent-red); font-weight: 600;">❌ Ошибки (${errors.length})</summary><div style="margin-top: 12px; max-height: 200px; overflow-y: auto; font-size: 12px;">${errors.map(e => `<div style="padding: 8px; background: rgba(239,68,68,0.08); border-left: 3px solid var(--accent-red); margin-bottom: 6px; border-radius: 0 6px 6px 0;">${e}</div>`).join('')}</div></details>`;
+          }
+
+          document.getElementById('importStatsContent').innerHTML = html;
+          document.getElementById('importStats').style.display = 'block';
+
+          showAlert('alert-results', `Импорт завершен! Импортировано: ${stats.imported}`, 'success');
+          document.getElementById('csvResults').value = '';
+        } else {
+          const err = await res.json();
+          showAlert('alert-results', err.error, 'error');
+        }
+      } catch (error) {
+        showAlert('alert-results', 'Ошибка импорта: ' + error.message, 'error');
+      }
+    }
+
+    function downloadTemplate() {
+      // UTF-8 BOM для корректного отображения кириллицы в Excel
+      const BOM = '\uFEFF';
+
+      const template = `${BOM}ФИО,Личка_кор,Личка_длин,Связка_кор,Связка_длин,Группа_кор,Группа_длин
+Иванов Иван Иванович,25,30,20,25,15,20
+Петрова Мария Сергеевна,20,25,15,20,10,15
+Сидоров Петр,0,0,0,0,0,0`;
+
+      const blob = new Blob([template], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = 'шаблон_результатов.csv';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    // ============ ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ============
+    function showAlert(elementId, msg, type) {
+      const el = document.getElementById(elementId);
+      el.innerHTML = `<div class="alert alert-${type}">${msg}</div>`;
+      setTimeout(() => el.innerHTML = '', 5000);
+    }
+
+    function formatDate(dateStr) {
+      const date = new Date(dateStr);
+      return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
+    }
+
+    function getMedal(place) {
+      if (place === 1) return '🥇';
+      if (place === 2) return '🥈';
+      if (place === 3) return '🥉';
+      return place;
+    }
+
+    // Загрузка данных при старте
+    loadPlayers();
+    loadEvents();
+  </script>
+</body>
+</html>
