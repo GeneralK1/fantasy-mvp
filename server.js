@@ -26,7 +26,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use('/auth', authRoutes);
 app.use(cors({
   origin: process.env.NODE_ENV === 'production' 
-    ? 'https://your-domain.com' 
+    ? 'https://master-maze-app.online' 
     : 'http://localhost:3000',
   credentials: true
 }));
