@@ -8,6 +8,56 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
+  <script>
+// Проверка токена при загрузке
+window.addEventListener('DOMContentLoaded', async () => {
+  const urlParams = new URLSearchParams(window.location.search);
+  const token = urlParams.get('token');
+  
+  if (token) {
+    localStorage.setItem('vk_token', token);
+    window.history.replaceState({}, '', '/');
+  }
+  
+  const savedToken = localStorage.getItem('vk_token');
+  
+  if (!savedToken) {
+    // Перенаправляем на авторизацию
+    window.location.href = '/auth/vk';
+    return;
+  }
+  
+  // Проверяем токен
+  try {
+    const res = await fetch('/auth/me', {
+      headers: { 'Authorization': `Bearer ${savedToken}` }
+    });
+    
+    if (!res.ok) {
+      localStorage.removeItem('vk_token');
+      window.location.href = '/auth/vk';
+    }
+  } catch (error) {
+    console.error('Ошибка проверки токена:', error);
+  }
+});
+
+// Функция для API запросов с токеном
+async function apiRequest(url, options = {}) {
+  const token = localStorage.getItem('vk_token');
+  const headers = {
+    'Content-Type': 'application/json',
+    ...options.headers
+  };
+  
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  
+  const res = await fetch(url, { ...options, headers });
+  return res;
+}
+</script>
 </head>
 <body>
   <div class="container">
@@ -172,44 +222,47 @@
     }
 
     // Рейтинг за всё время
-    async function loadAllTimeRankings() {
-      try {
-        const res = await fetch('/api/rankings/all-time');
-        const rankings = await res.json();
-
-        const container = document.getElementById('allTimeRankings');
-
-        if (rankings.length === 0) {
-          container.innerHTML = '<p style="color: var(--text-muted); text-align: center; padding: 40px;">Пока нет данных</p>';
-          return;
-        }
-
-        container.innerHTML = `
-          <table class="ranking-table">
-            <thead>
-              <tr>
-                <th>Место</th>
-                <th>Команда</th>
-                <th>Очки</th>
-                <th>Событий</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${rankings.map((r, i) => `
-                <tr class="${i < 3 ? 'top-three' : ''}">
-                  <td>${getMedal(i + 1)}</td>
-                  <td>${r.user_name}</td>
-                  <td><strong>${r.total_points}</strong></td>
-                  <td>${r.events_count}</td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-        `;
-      } catch (error) {
-        console.error('Ошибка загрузки рейтинга:', error);
-      }
+async function loadAllTimeRankings() {
+  try {
+    const res = await fetch('/api/rankings/all-time');
+    const rankings = await res.json();
+    
+    const container = document.getElementById('allTimeRankings');
+    
+    if (rankings.length === 0) {
+      container.innerHTML = '<p style="color: #999; text-align: center; padding: 20px;">Пока нет данных</p>';
+      return;
     }
+
+    container.innerHTML = `
+      <table class="ranking-table">
+        <thead>
+          <tr>
+            <th>Место</th>
+            <th>Команда</th>
+            <th>Очки</th>
+            <th>Событий</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rankings.map((r, i) => `
+            <tr class="${i < 3 ? 'top-three' : ''}">
+              <td>${getMedal(i + 1)}</td>
+              <td>
+                ${r.photo ? `<img src="${r.photo}" style="width: 30px; height: 30px; border-radius: 50%; margin-right: 10px; vertical-align: middle;">` : ''}
+                ${r.first_name || r.user_name} ${r.last_name || ''}
+              </td>
+              <td><strong>${r.total_points}</strong></td>
+              <td>${r.events_count}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    `;
+  } catch (error) {
+    console.error('Ошибка загрузки рейтинга:', error);
+  }
+}
 
     // Рейтинг спортсменов
     async function loadPlayerRankings() {

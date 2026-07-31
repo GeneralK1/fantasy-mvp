@@ -8,6 +8,56 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
+  <script>
+// Проверка токена при загрузке
+window.addEventListener('DOMContentLoaded', async () => {
+  const urlParams = new URLSearchParams(window.location.search);
+  const token = urlParams.get('token');
+  
+  if (token) {
+    localStorage.setItem('vk_token', token);
+    window.history.replaceState({}, '', '/');
+  }
+  
+  const savedToken = localStorage.getItem('vk_token');
+  
+  if (!savedToken) {
+    // Перенаправляем на авторизацию
+    window.location.href = '/auth/vk';
+    return;
+  }
+  
+  // Проверяем токен
+  try {
+    const res = await fetch('/auth/me', {
+      headers: { 'Authorization': `Bearer ${savedToken}` }
+    });
+    
+    if (!res.ok) {
+      localStorage.removeItem('vk_token');
+      window.location.href = '/auth/vk';
+    }
+  } catch (error) {
+    console.error('Ошибка проверки токена:', error);
+  }
+});
+
+// Функция для API запросов с токеном
+async function apiRequest(url, options = {}) {
+  const token = localStorage.getItem('vk_token');
+  const headers = {
+    'Content-Type': 'application/json',
+    ...options.headers
+  };
+  
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  
+  const res = await fetch(url, { ...options, headers });
+  return res;
+}
+</script>
   <script src="https://unpkg.com/jwt-decode/build/jwt-decode.js"></script>
   <script src="/js/mock-auth.js"></script>
 </head>
