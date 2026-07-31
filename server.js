@@ -14,12 +14,12 @@ const authRoutes = require('./routes/auth');
 const rateLimit = require('express-rate-limit');
 
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 минут
-  max: 100 // максимум 100 запросов
+  windowMs: 60 * 60 * 1000, // 15 минут
+  max: 1000 // максимум 100 запросов
 });
 // Доверие прокси (Nginx)
 app.set('trust proxy', 1);
-app.use(limiter);
+//app.use(limiter);
 // Middleware
 app.use(cors());
 app.use(express.json());
