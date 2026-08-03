@@ -7,19 +7,8 @@ const { Readable } = require('stream');
 
 const app = express();
 const PORT = 3000;
-
-require('dotenv').config();
-const { authenticateUser, requireAdmin } = require('./middleware/auth');
-const authRoutes = require('./routes/auth');
-const rateLimit = require('express-rate-limit');
-
-const limiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 15 минут
-  max: 1000 // максимум 100 запросов
-});
-// Доверие прокси (Nginx)
 app.set('trust proxy', 1);
-//app.use(limiter);
+
 // Middleware
 app.use(cors());
 app.use(express.json());
@@ -31,6 +20,20 @@ app.use(cors({
     : 'http://localhost:3000',
   credentials: true
 }));
+
+require('dotenv').config();
+const { authenticateUser, requireAdmin } = require('./middleware/auth');
+const authRoutes = require('./routes/auth');
+const rateLimit = require('express-rate-limit');
+
+const limiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 15 минут
+  max: 1000 // максимум 100 запросов
+});
+// Доверие прокси (Nginx)
+
+//app.use(limiter);
+
 
 // ============ API ДЛЯ СПОРТСМЕНОВ ============
 // Тестовый endpoint для проверки токена
