@@ -4,112 +4,46 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Сборка команды - Фэнтези Лига</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/@vkontakte/vk-bridge/dist/browser.min.js"></script>
   <link rel="stylesheet" href="style.css">
-  <script>
-// Проверка токена при загрузке
-window.addEventListener('DOMContentLoaded', async () => {
-  const urlParams = new URLSearchParams(window.location.search);
-  const token = urlParams.get('token');
-  
-  if (token) {
-    localStorage.setItem('vk_token', token);
-    window.history.replaceState({}, '', '/');
-  }
-  
-  const savedToken = localStorage.getItem('vk_token');
-  
-  if (!savedToken) {
-    // Перенаправляем на авторизацию
-    window.location.href = '/auth/vk';
-    return;
-  }
-  
-  // Проверяем токен
-  try {
-    const res = await fetch('/auth/me', {
-      headers: { 'Authorization': `Bearer ${savedToken}` }
-    });
-    
-    if (!res.ok) {
-      localStorage.removeItem('vk_token');
-      window.location.href = '/auth/vk';
-    }
-  } catch (error) {
-    console.error('Ошибка проверки токена:', error);
-  }
-});
-
-// Функция для API запросов с токеном
-async function apiRequest(url, options = {}) {
-  const token = localStorage.getItem('vk_token');
-  const headers = {
-    'Content-Type': 'application/json',
-    ...options.headers
-  };
-  
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
-  
-  const res = await fetch(url, { ...options, headers });
-  return res;
-}
-</script>
-  <script src="https://unpkg.com/jwt-decode/build/jwt-decode.js"></script>
-  <script src="/js/mock-auth.js"></script>
 </head>
 <body>
-  <div id="authLoader" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 9999; display: flex; justify-content: center; align-items: center;">
-  <div style="text-align: center;">
-    <div style="font-size: 24px; margin-bottom: 20px;"> Авторизация...</div>
-    <div class="spinner" style="width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid #667eea; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto;"></div>
-  </div>
-</div>
-
-<style>
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-</style>
   <div class="container">
     <div class="header">
-      <h1>🏆 Фэнтези Лига — Спортивный туризм</h1>
+      <h1>🏆 Фэнтези Лига - Спортивный туризм</h1>
       <nav>
         <a href="/rankings.html">🏅 Рейтинги</a>
-        <a href="/events.html">📅 События</a>
+        <a href="/events.html"> События</a>
         <a href="/admin.html">⚙️ Админ-панель</a>
       </nav>
     </div>
 
-    <!-- Шаг 1: Создание команды -->
-    <div class="card" id="teamSetup">
-      <h2>👥 Шаг 1: Создание команды</h2>
-      <div id="alert"></div>
-
-      <div id="currentEventInfo" style="margin-bottom: 24px;">
-        <p style="color: var(--text-muted);">Загрузка информации о событии...</p>
-      </div>
-
-      <div class="form-row">
-        <input type="text" id="teamName" placeholder="Название вашей команды" style="flex: 1;">
-        <button class="btn btn-primary" onclick="createTeam()">Создать команду</button>
-      </div>
-      <p style="margin-top: 12px; color: var(--text-muted); font-size: 13px;">
-        После создания вы сможете добавить спортсменов и зарегистрировать команду.
-      </p>
+    <!-- Загрузка -->
+    <div id="loading" style="text-align: center; padding: 50px;">
+      <div style="font-size: 24px; margin-bottom: 20px;"> Загрузка...</div>
+      <div class="spinner" style="width: 50px; height: 50px; border: 5px solid #f3f3f3; border-top: 5px solid #667eea; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto;"></div>
     </div>
 
-    <!-- Шаг 2: Сборка и регистрация команды -->
+    <!-- Создание команды (автоматическое) -->
+    <div id="teamSetup" class="card hidden">
+      <h2> Создание команды</h2>
+      <div id="alert"></div>
+      
+      <div id="userInfo" style="background: #f0f9ff; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+        <p style="margin: 0; font-size: 16px;"> <strong id="userNameDisplay">Загрузка...</strong></p>
+        <p style="margin: 5px 0 0 0; color: #666; font-size: 14px;">Команда будет создана с этим именем</p>
+      </div>
+      
+      <button class="btn btn-primary" onclick="createTeam()">✅ Создать команду</button>
+    </div>
+
+    <!-- Интерфейс сборки команды -->
     <div id="teamBuilder" class="hidden">
       <!-- Статистика -->
       <div class="stats-bar">
         <div class="stat-box">
           <h3>Команда</h3>
-          <div class="value" id="teamNameDisplay" style="font-size: 18px;">—</div>
+          <div class="value" id="teamNameDisplay">-</div>
         </div>
         <div class="stat-box">
           <h3>Мужчины</h3>
@@ -125,37 +59,37 @@ async function apiRequest(url, options = {}) {
         </div>
       </div>
 
-      <!-- Кнопка регистрации (появляется только когда 8 человек) -->
-      <div class="card" id="registrationBlock" style="display: none;">
-        <h2>✅ Команда собрана!</h2>
-        <p style="margin-bottom: 20px; color: var(--text-secondary);">Вы набрали 8 спортсменов. Теперь команду можно зарегистрировать на активное событие.</p>
-        <button class="btn" style="font-weight: bold; font-size: 16px; padding: 14px 32px;" onclick="registerTeam()">🚀 Зарегистрировать на событие</button>
+      <!-- Кнопка регистрации -->
+      <div class="card" id="registrationBlock" style="display: none; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white;">
+        <h2 style="color: white; margin-bottom: 10px;">✅ Команда собрана!</h2>
+        <p style="margin-bottom: 15px;">Вы набрали 8 спортсменов. Теперь команду можно зарегистрировать.</p>
+        <button class="btn" style="background: white; color: #059669; font-weight: bold; font-size: 16px;" onclick="registerTeam()">🚀 Зарегистрировать на событие</button>
       </div>
 
-      <div class="card" id="alreadyRegisteredBlock" style="display: none;">
-        <h2>✅ Команда успешно зарегистрирована!</h2>
-        <p>Состав зафиксирован и отправлен на текущее событие. Изменить его больше нельзя.</p>
+      <div class="card" id="alreadyRegisteredBlock" style="display: none; background: #d1fae5; border-left: 4px solid #10b981;">
+        <h2 style="color: #065f46; margin-bottom: 10px;">✅ Команда зарегистрирована!</h2>
+        <p style="color: #065f46;">Состав зафиксирован. Изменить его больше нельзя.</p>
       </div>
 
       <!-- Текущий состав -->
       <div class="card">
-        <h2>📋 Ваш состав</h2>
+        <h2>✅ Ваш состав</h2>
         <div id="currentTeam">
-          <p style="color: var(--text-muted);">Команда пуста. Добавьте спортсменов ниже.</p>
+          <p style="color: #999;">Команда пуста. Добавьте спортсменов ниже.</p>
         </div>
       </div>
 
       <!-- Список доступных спортсменов -->
       <div class="card">
-        <h2>👥 Доступные спортсмены</h2>
+        <h2>📋 Доступные спортсмены</h2>
 
         <div class="search-box">
-          <input type="text" id="searchInput" placeholder="🔍 Поиск по имени, команде или разряду...">
+          <input type="text" id="searchInput" placeholder=" Поиск по имени, команде или разряду...">
         </div>
 
         <div class="filters-section">
           <div class="filter-group">
-            <label>Пол</label>
+            <label>Пол:</label>
             <div class="filter-bar" id="genderFilters">
               <button class="filter-btn active" data-filter="gender" data-value="all">Все</button>
               <button class="filter-btn" data-filter="gender" data-value="male">Мужчины</button>
@@ -164,14 +98,14 @@ async function apiRequest(url, options = {}) {
           </div>
 
           <div class="filter-group">
-            <label>Команда</label>
+            <label>Команда:</label>
             <div class="filter-bar" id="teamFilters">
               <button class="filter-btn active" data-filter="team" data-value="all">Все</button>
             </div>
           </div>
 
           <div class="filter-group">
-            <label>Разряд</label>
+            <label>Разряд:</label>
             <div class="filter-bar" id="rankFilters">
               <button class="filter-btn active" data-filter="rank" data-value="all">Все</button>
             </div>
@@ -180,7 +114,7 @@ async function apiRequest(url, options = {}) {
 
         <div class="reset-filters">
           <button class="btn btn-danger" id="resetBtn">🔄 Сбросить фильтры</button>
-          <span id="resultsCount" style="margin-left: 12px; color: var(--text-muted); font-size: 13px;"></span>
+          <span id="resultsCount" style="margin-left: 10px; color: #666; font-size: 13px;"></span>
         </div>
 
         <div id="playersList" class="players-grid"></div>
@@ -189,136 +123,94 @@ async function apiRequest(url, options = {}) {
   </div>
 
   <script>
-    // Проверка авторизации при загрузке
-async function checkVKAuth() {
-  // Проверяем токен из URL
-  const urlParams = new URLSearchParams(window.location.search);
-  const token = urlParams.get('token');
-  
-  if (token) {
-    localStorage.setItem('vk_token', token);
-    window.history.replaceState({}, '', '/');
-  }
-  
-  const savedToken = localStorage.getItem('vk_token');
-  
-  if (!savedToken) {
-    // Перенаправляем на авторизацию
-    window.location.href = '/auth/vk';
-    return null;
-  }
-  
-  try {
-    const res = await fetch('/auth/me', {
-      headers: { 'Authorization': `Bearer ${savedToken}` }
-    });
-    
-    if (res.ok) {
-      const user = await res.json();
-      console.log('✅ Авторизован:', user.first_name, user.last_name);
-      document.getElementById('authLoader').style.display = 'none';
-      return user;
-    } else {
-      localStorage.removeItem('vk_token');
-      window.location.href = '/auth/vk';
-      return null;
-    }
-  } catch (error) {
-    console.error('Ошибка авторизации:', error);
-    localStorage.removeItem('vk_token');
-    window.location.href = '/auth/vk';
-    return null;
-  }
-}
-
-// Добавляем токен ко всем запросам
-async function apiRequest(url, options = {}) {
-  const token = localStorage.getItem('vk_token');
-  const headers = {
-    'Content-Type': 'application/json',
-    ...options.headers
-  };
-  
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
-  
-  const res = await fetch(url, { ...options, headers });
-  return res;
-}
     let currentTeam = null;
     let allPlayers = [];
     let teamPlayers = [];
     let isRegistered = false;
+    let vkUserInfo = null;
 
     const rankOrder = ['МС', 'КМС', 'I', 'II', 'III'];
     let activeFilters = { gender: 'all', team: 'all', rank: 'all', search: '' };
 
-    async function init() {
-  await checkVKAuth();
-  setupFilterListeners();
-  // остальные вызовы...
-
-      document.getElementById('searchInput').addEventListener('input', (e) => {
-        activeFilters.search = e.target.value.toLowerCase().trim();
-        applyFilters();
-      });
-
-      document.getElementById('resetBtn').addEventListener('click', resetFilters);
-      loadCurrentEvent();
-    }
-
-    function setupFilterListeners() {
-      ['genderFilters', 'teamFilters', 'rankFilters'].forEach(groupId => {
-        const container = document.getElementById(groupId);
-        container.addEventListener('click', (e) => {
-          if (e.target.classList.contains('filter-btn')) {
-            setFilter(e.target.dataset.filter, e.target.dataset.value, e.target);
-          }
-        });
-      });
-    }
-
-    async function loadCurrentEvent() {
+    // Инициализация VK Bridge
+    async function initVK() {
       try {
-        const res = await fetch('/api/events/current');
-        const event = await res.json();
-        const container = document.getElementById('currentEventInfo');
+        // Отправляем событие готовности
+        if (window.VKWebApp) {
+          VKWebApp.init();
+          
+          // Получаем данные пользователя
+          const userData = await VKWebApp.callMethod("VKWebAppGetUserInfo", {});
+          vkUserInfo = userData;
+          
+          console.log('Пользователь ВК:', userData);
+          
+          // Проверяем, есть ли уже команда
+          await checkExistingTeam();
+          
+        } else {
+          showAlert('Ошибка инициализации VK', 'error');
+        }
+      } catch (error) {
+        console.error('Ошибка VK:', error);
+        showAlert('Ошибка авторизации: ' + error.message, 'error');
+      }
+    }
 
-        if (!event) {
-          container.innerHTML = '<div style="background: rgba(239,68,68,0.1); color: #f87171; padding: 16px; border-radius: 10px; border: 1px solid rgba(239,68,68,0.2);">⚠️ Нет активного события. Создание команд пока невозможно.</div>';
+    // Проверка существующей команды
+    async function checkExistingTeam() {
+      try {
+        const token = localStorage.getItem('vk_token');
+        if (!token) {
+          document.getElementById('loading').classList.add('hidden');
+          document.getElementById('teamSetup').classList.remove('hidden');
+          document.getElementById('userNameDisplay').textContent = `${vkUserInfo.first_name} ${vkUserInfo.last_name}`;
           return;
         }
 
-        const now = new Date().toISOString().split('T')[0];
-        const isRegistrationOpen = now >= event.registration_start && now <= event.registration_end;
+        // Проверяем токен и получаем информацию о команде
+        const res = await fetch('/api/teams/me', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
 
-        container.innerHTML = `
-          <div style="background: linear-gradient(135deg, rgba(139,92,246,0.15), rgba(59,130,246,0.1)); border: 1px solid rgba(139,92,246,0.2); color: var(--text-primary); padding: 24px; border-radius: 12px; margin-bottom: 20px;">
-            <h3 style="font-size: 22px; margin-bottom: 12px; font-weight: 700;">${event.name}</h3>
-            ${event.description ? `<p style="margin-bottom: 12px; color: var(--text-secondary);">${event.description}</p>` : ''}
-            <p style="font-size: 14px; color: var(--text-muted); margin-bottom: 6px;">📅 Даты события: ${formatDate(event.event_start_date)} — ${formatDate(event.event_end_date)}</p>
-            <p style="font-size: 14px; color: var(--text-muted);">📝 Регистрация: ${formatDate(event.registration_start)} — ${formatDate(event.registration_end)}</p>
-            ${!isRegistrationOpen ? '<p style="margin-top: 12px; font-weight: 700; color: var(--accent-orange);">⚠️ Регистрация закрыта</p>' : ''}
-          </div>
-        `;
+        if (res.ok) {
+          const team = await res.json();
+          currentTeam = team;
+          document.getElementById('loading').classList.add('hidden');
+          document.getElementById('teamBuilder').classList.remove('hidden');
+          document.getElementById('teamNameDisplay').textContent = team.user_name;
+          await loadPlayers();
+          await loadTeam();
+        } else {
+          // Команды нет, показываем форму создания
+          document.getElementById('loading').classList.add('hidden');
+          document.getElementById('teamSetup').classList.remove('hidden');
+          document.getElementById('userNameDisplay').textContent = `${vkUserInfo.first_name} ${vkUserInfo.last_name}`;
+        }
       } catch (error) {
-        console.error('Ошибка загрузки события:', error);
+        console.error('Ошибка проверки команды:', error);
+        document.getElementById('loading').classList.add('hidden');
+        document.getElementById('teamSetup').classList.remove('hidden');
       }
     }
 
-    // ШАГ 1: Просто создаём команду
+    // Создание команды с именем из ВК
     async function createTeam() {
-      const name = document.getElementById('teamName').value.trim();
-      if (!name) {
-        showAlert('Введите название команды', 'error');
+      if (!vkUserInfo) {
+        showAlert('Ошибка: данные пользователя не получены', 'error');
         return;
       }
 
-      const res = await apiRequest('/api/teams', {
-  method: 'POST',
-  body: JSON.stringify({ user_name: name })
-});
+      const teamName = `${vkUserInfo.first_name} ${vkUserInfo.last_name}`.trim();
+      
+      const res = await fetch('/api/teams', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('vk_token')}`
+        },
+        body: JSON.stringify({ user_name: teamName })
+      });
 
       if (res.ok) {
         currentTeam = await res.json();
@@ -326,24 +218,27 @@ async function apiRequest(url, options = {}) {
         document.getElementById('teamBuilder').classList.remove('hidden');
         document.getElementById('teamNameDisplay').textContent = currentTeam.user_name;
         await loadPlayers();
-        showAlert('Команда создана! Теперь добавьте 8 спортсменов.', 'success');
+        showAlert('Команда создана!', 'success');
       } else {
         const err = await res.json();
         showAlert(err.error, 'error');
       }
     }
 
-    // ШАГ 2: Регистрация собранной команды
+    // Регистрация команды
     async function registerTeam() {
-      if (!confirm('Вы уверены? После регистрации состав команды изменить будет нельзя!')) return;
+      if (!confirm('Вы уверены? После регистрации состав изменить будет нельзя!')) return;
 
-      const res = await fetch(`/api/teams/${currentTeam.id}/register`, { method: 'POST' });
-
+      const res = await fetch(`/api/teams/${currentTeam.id}/register`, { 
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('vk_token')}` }
+      });
+      
       if (res.ok) {
         isRegistered = true;
         document.getElementById('registrationBlock').style.display = 'none';
         document.getElementById('alreadyRegisteredBlock').style.display = 'block';
-        showAlert('Команда успешно зарегистрирована на событие!', 'success');
+        showAlert('Команда зарегистрирована!', 'success');
       } else {
         const err = await res.json();
         showAlert(err.error, 'error');
@@ -391,12 +286,23 @@ async function apiRequest(url, options = {}) {
       applyFilters();
     }
 
+    function setupFilterListeners() {
+      ['genderFilters', 'teamFilters', 'rankFilters'].forEach(groupId => {
+        const container = document.getElementById(groupId);
+        container.addEventListener('click', (e) => {
+          if (e.target.classList.contains('filter-btn')) {
+            setFilter(e.target.dataset.filter, e.target.dataset.value, e.target);
+          }
+        });
+      });
+    }
+
     function applyFilters() {
       let filtered = allPlayers.filter(p => {
         if (activeFilters.gender !== 'all' && p.gender !== activeFilters.gender) return false;
         if (activeFilters.team !== 'all' && p.team !== activeFilters.team) return false;
         if (activeFilters.rank !== 'all' && p.rank !== activeFilters.rank) return false;
-        if (activeFilters.search && !(`${p.full_name} ${p.team} ${p.rank}`.toLowerCase().includes(activeFilters.search))) return false;
+        if (activeFilters.search && !(`${p.full_name} ${p.team} ${p.rank}`.toLowerCase().includes(activeFilters.search.toLowerCase()))) return false;
         return true;
       });
 
@@ -418,7 +324,7 @@ async function apiRequest(url, options = {}) {
       document.getElementById('resultsCount').textContent = `Найдено: ${players.length}`;
 
       if (players.length === 0) {
-        list.innerHTML = '<p style="color: var(--text-muted); grid-column: 1/-1; text-align: center; padding: 40px;">Нет доступных спортсменов</p>';
+        list.innerHTML = '<p style="color: #999; grid-column: 1/-1;">Нет доступных спортсменов</p>';
         return;
       }
 
@@ -428,7 +334,7 @@ async function apiRequest(url, options = {}) {
             <h3>${p.full_name}</h3>
             <p>📅 ${p.birth_year} г.р.</p>
             <p>🏃 ${p.team}</p>
-            <p>🏆 ${p.rank}</p>
+            <p> ${p.rank}</p>
             <p>${p.gender === 'male' ? '♂ Мужчина' : '♀ Женщина'}</p>
           </div>
           <button class="btn btn-success" onclick="addPlayer(${p.id})">Добавить</button>
@@ -439,7 +345,10 @@ async function apiRequest(url, options = {}) {
     async function addPlayer(playerId) {
       const res = await fetch(`/api/teams/${currentTeam.id}/players`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('vk_token')}`
+        },
         body: JSON.stringify({ player_id: playerId })
       });
 
@@ -457,13 +366,18 @@ async function apiRequest(url, options = {}) {
         showAlert('Нельзя удалить спортсмена из зарегистрированной команды!', 'error');
         return;
       }
-      await fetch(`/api/teams/${currentTeam.id}/players/${playerId}`, { method: 'DELETE' });
+      await fetch(`/api/teams/${currentTeam.id}/players/${playerId}`, { 
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('vk_token')}` }
+      });
       await loadTeam();
       applyFilters();
     }
 
     async function loadTeam() {
-      const res = await fetch(`/api/teams/${currentTeam.id}`);
+      const res = await fetch(`/api/teams/${currentTeam.id}`, {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('vk_token')}` }
+      });
       const team = await res.json();
       teamPlayers = team.players;
 
@@ -477,7 +391,7 @@ async function apiRequest(url, options = {}) {
 
       const teamDiv = document.getElementById('currentTeam');
       if (total === 0) {
-        teamDiv.innerHTML = '<p style="color: var(--text-muted);">Команда пуста. Добавьте спортсменов ниже.</p>';
+        teamDiv.innerHTML = '<p style="color: #999;">Команда пуста. Добавьте спортсменов ниже.</p>';
       } else {
         teamDiv.innerHTML = teamPlayers.map(p => `
           <div class="team-slot filled">
@@ -492,7 +406,6 @@ async function apiRequest(url, options = {}) {
         `).join('');
       }
 
-      // Показываем кнопку регистрации только если 8 человек и ещё не зарегистрированы
       if (total === 8 && !isRegistered) {
         document.getElementById('registrationBlock').style.display = 'block';
       } else {
@@ -504,15 +417,28 @@ async function apiRequest(url, options = {}) {
       const el = document.getElementById('alert');
       el.innerHTML = `<div class="alert alert-${type}">${msg}</div>`;
       setTimeout(() => el.innerHTML = '', 3000);
-      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
 
-    function formatDate(dateStr) {
-      const date = new Date(dateStr);
-      return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
-    }
-
-    init();
+    // Запуск
+    document.addEventListener('DOMContentLoaded', () => {
+      setupFilterListeners();
+      
+      document.getElementById('searchInput').addEventListener('input', (e) => {
+        activeFilters.search = e.target.value;
+        applyFilters();
+      });
+      
+      document.getElementById('resetBtn').addEventListener('click', resetFilters);
+      
+      initVK();
+    });
   </script>
+
+  <style>
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
 </body>
 </html>

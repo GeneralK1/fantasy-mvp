@@ -49,6 +49,24 @@ app.get('/auth/me', (req, res) => {
     res.status(401).json({ error: 'Недействительный токен' });
   }
 });
+// Получить команду текущего пользователя
+app.get('/api/teams/me', authenticateUser, (req, res) => {
+  const vk_id = req.user.vk_id;
+  const team = db.prepare('SELECT * FROM teams WHERE vk_id = ?').get(vk_id);
+  
+  if (!team) {
+    return res.status(404).json({ error: 'Команда не найдена' });
+  }
+  
+  // Получаем игроков команды
+  const players = db.prepare(`
+    SELECT p.* FROM players p
+    JOIN team_players tp ON p.id = tp.player_id
+    WHERE tp.team_id = ?
+  `).all(team.id);
+  
+  res.json({ ...team, players });
+});
 
 app.get('/api/players', (req, res) => {
   const players = db.prepare('SELECT * FROM players ORDER BY gender, full_name').all();

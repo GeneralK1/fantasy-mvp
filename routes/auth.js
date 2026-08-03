@@ -69,11 +69,19 @@ router.get('/callback', async (req, res) => {
         vk_id: user_id, 
         first_name: vkUser.first_name, 
         last_name: vkUser.last_name,
-        photo: vkUser.photo_100
-      },
-      process.env.JWT_SECRET,
-      { expiresIn: '30d' }
-    );
+        photo: vkUser.photo_100,
+        isAdmin: isAdmin
+  },
+  process.env.JWT_SECRET,
+  { expiresIn: '30d' }
+);
+
+res.send(`
+  <script>
+    localStorage.setItem('vk_token', '${token}');
+    window.location.href = '/';
+  <\/script>
+`);
 
     // Отправляем токен клиенту
     res.redirect(`/?token=${token}`);
