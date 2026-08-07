@@ -150,6 +150,7 @@ app.post('/api/players/import', (req, res) => {
 
 // ============ API ДЛЯ КОМАНД ============
 
+// Создание команды
 app.post('/api/teams', (req, res) => {
   const { user_name, vk_id } = req.body;
   
@@ -157,15 +158,31 @@ app.post('/api/teams', (req, res) => {
     return res.status(400).json({ error: 'Не указаны имя или VK ID' });
   }
   
-  // Проверяем, есть ли уже команда
-  const existingTeam = db.prepare('SELECT * FROM teams WHERE vk_id = ?').get(vk_id);
-  if (existingTeam) {
-    return res.status(400).json({ error: 'У вас уже есть команда' });
+  try {
+    // 1. Сначала создаём пользователя в vk_users (если нет)
+    const firstName = user_name.split(' ')[0] || 'User';
+    const lastName = user_name.split(' ')[1] || '';
+    
+    db.prepare(`
+      INSERT OR IGNORE INTO vk_users (vk_id, first_name, last_name, is_admin)
+      VALUES (?, ?, ?, 0)
+    `).run(vk_id, firstName, lastName);
+    
+    // 2. Проверяем, есть ли уже команда
+    const existingTeam = db.prepare('SELECT * FROM teams WHERE vk_id = ?').get(vk_id);
+    if (existingTeam) {
+      return res.status(400).json({ error: 'У вас уже есть команда' });
+    }
+    
+    // 3. Создаём команду
+    const result = db.prepare('INSERT INTO teams (vk_id, user_name) VALUES (?, ?)').run(vk_id, user_name);
+    const team = db.prepare('SELECT * FROM teams WHERE id = ?').get(result.lastInsertRowid);
+    
+    res.json(team);
+  } catch (error) {
+    console.error('Ошибка создания команды:', error);
+    res.status(500).json({ error: 'Ошибка: ' + error.message });
   }
-  
-  const result = db.prepare('INSERT INTO teams (vk_id, user_name) VALUES (?, ?)').run(vk_id, user_name);
-  const team = db.prepare('SELECT * FROM teams WHERE id = ?').get(result.lastInsertRowid);
-  res.json(team);
 });
 
 app.post('/api/teams/:teamId/players', (req, res) => {
