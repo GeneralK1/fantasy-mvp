@@ -267,6 +267,23 @@ app.get('/api/teams/by-vk-id', (req, res) => {
 
 // ============ API ДЛЯ СОБЫТИЙ ============
 
+// Получить активные события
+app.get('/api/events/active', (req, res) => {
+  try {
+    const events = db.prepare(`
+      SELECT * FROM events 
+      WHERE status = 'active' 
+      AND registration_end >= date('now')
+      ORDER BY registration_start
+    `).all();
+    
+    res.json(events);
+  } catch (error) {
+    console.error('Ошибка загрузки событий:', error);
+    res.status(500).json({ error: 'Ошибка загрузки событий' });
+  }
+});
+
 app.get('/api/events', (req, res) => {
   const events = db.prepare('SELECT * FROM events ORDER BY event_start_date DESC').all();
   res.json(events);
