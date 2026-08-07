@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Сборка команды - Фэнтези Лига</title>
-  <script src="https://unpkg.com/@vkontakte/vk-bridge/dist/browser.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@vkontakte/vk-bridge@2.15.0/dist/browser.min.js"></script>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -142,13 +142,14 @@
 async function initVK() {
   try {
     console.log('🚀 Инициализация VK Mini App...');
+    console.log('vkBridge доступен:', typeof vkBridge !== 'undefined');
     
     // Инициализируем VK Bridge
-    await VKBridge.send('VKWebAppInit', {});
+    await vkBridge.send('VKWebAppInit', {});
     console.log('✅ VK Bridge инициализирован');
 
     // Получаем данные пользователя
-    const userData = await VKBridge.send('VKWebAppGetUserInfo', {});
+    const userData = await vkBridge.send('VKWebAppGetUserInfo', {});
     vkUserInfo = userData;
     console.log('👤 Пользователь:', userData);
 
