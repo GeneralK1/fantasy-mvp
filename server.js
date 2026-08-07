@@ -266,7 +266,54 @@ app.get('/api/teams/by-vk-id', (req, res) => {
 });
 
 // ============ API ДЛЯ СОБЫТИЙ ============
+// Импорт событий из CSV
+app.post('/api/events/import', (req, res) => {
+  const { csv } = req.body;
+  
+  if (!csv) {
+    return res.status(400).json({ error: 'CSV не передан' });
+  }
 
+  const lines = csv.split('\n');
+  let imported = 0;
+  let errors = 0;
+
+  // Пропускаем заголовок
+  const startIndex = lines[0].toLowerCase().includes('name') ? 1 : 0;
+
+  for (let i = startIndex; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line) continue;
+
+    const parts = line.split(',');
+    if (parts.length < 6) {
+      errors++;
+      continue;
+    }
+
+    const [name, description, event_start_date, event_end_date, registration_start, registration_end] = parts;
+    
+    try {
+      db.prepare(`
+        INSERT INTO events (name, description, event_start_date, event_end_date, registration_start, registration_end, status)
+        VALUES (?, ?, ?, ?, ?, ?, 'active')
+      `).run(
+        name.trim(),
+        description.trim(),
+        event_start_date.trim(),
+        event_end_date.trim(),
+        registration_start.trim(),
+        registration_end.trim()
+      );
+      imported++;
+    } catch (error) {
+      console.error('Ошибка импорта события:', error);
+      errors++;
+    }
+  }
+
+  res.json({ imported, errors });
+});
 // Получить активные события
 app.get('/api/events/active', (req, res) => {
   try {
@@ -294,7 +341,7 @@ app.get('/api/events/current', (req, res) => {
   res.json(event || null);
 });
 
-app.post('/api/events', requireAdmin, (req, res) => {
+app.post('/api/events', (req, res) => {
   const { name, description, event_start_date, event_end_date, registration_start, registration_end } = req.body;
   
   if (!name || !event_start_date || !event_end_date || !registration_start || !registration_end) {

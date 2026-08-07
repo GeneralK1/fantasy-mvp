@@ -65,6 +65,22 @@
       </div>
     </div>
 
+    <!-- Секция импорта спортсменов -->
+<div class="card">
+  <h2>📥 Импорт спортсменов из CSV</h2>
+  <div style="background: #f0f9ff; padding: 20px; border-radius: 8px; margin-bottom: 15px;">
+    <p style="margin-bottom: 10px;"><strong>Формат CSV:</strong></p>
+    <code style="display: block; background: white; padding: 10px; border-radius: 4px; font-size: 12px;">
+      full_name,birth_year,team,rank,gender<br>
+      Иванов Иван,1995,Москва,МС,male<br>
+      Петрова Мария,1998,СПб,КМС,female
+    </code>
+  </div>
+  <input type="file" id="playersCsvFile" accept=".csv" style="margin-bottom: 10px;" />
+  <button class="btn btn-primary" onclick="importPlayersFromCsv()">📥 Импортировать спортсменов</button>
+  <div id="playersImportResult" style="margin-top: 10px;"></div>
+</div>
+
     <!-- Вкладка: События -->
     <div class="tab-content hidden" id="tab-events">
       <div class="card">
@@ -101,6 +117,21 @@
         <div id="eventDetailsContent"></div>
       </div>
     </div>
+
+    <!-- Секция импорта событий -->
+<div class="card">
+  <h2>📥 Импорт событий из CSV</h2>
+  <div style="background: #f0f9ff; padding: 20px; border-radius: 8px; margin-bottom: 15px;">
+    <p style="margin-bottom: 10px;"><strong>Формат CSV:</strong></p>
+    <code style="display: block; background: white; padding: 10px; border-radius: 4px; font-size: 12px;">
+      name,description,event_start_date,event_end_date,registration_start,registration_end<br>
+      Чемпионат России,Описание,2026-08-15,2026-08-20,2026-08-01,2026-08-14
+    </code>
+  </div>
+  <input type="file" id="eventsCsvFile" accept=".csv" style="margin-bottom: 10px;" />
+  <button class="btn btn-primary" onclick="importEventsFromCsv()">📥 Импортировать события</button>
+  <div id="eventsImportResult" style="margin-top: 10px;"></div>
+</div>
 
     <!-- Вкладка: Результаты -->
     <div class="tab-content hidden" id="tab-results">
@@ -232,6 +263,96 @@
         renderPlayers();
       });
     });
+
+    // Импорт спортсменов из CSV
+async function importPlayersFromCsv() {
+  const fileInput = document.getElementById('playersCsvFile');
+  const file = fileInput.files[0];
+  
+  if (!file) {
+    alert('Выберите CSV файл');
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = async function(e) {
+    const csv = e.target.result;
+    
+    try {
+      const res = await fetch('/api/players/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ csv })
+      });
+
+      const result = await res.json();
+      
+      if (res.ok) {
+        document.getElementById('playersImportResult').innerHTML = 
+          `<div style="background: #d1fae5; padding: 10px; border-radius: 4px; color: #065f46;">
+            ✅ Импортировано ${result.imported} спортсменов
+          </div>`;
+        loadPlayers(); // Перезагрузить список
+      } else {
+        document.getElementById('playersImportResult').innerHTML = 
+          `<div style="background: #fee2e2; padding: 10px; border-radius: 4px; color: #991b1b;">
+            ❌ Ошибка: ${result.error}
+          </div>`;
+      }
+    } catch (error) {
+      document.getElementById('playersImportResult').innerHTML = 
+        `<div style="background: #fee2e2; padding: 10px; border-radius: 4px; color: #991b1b;">
+          ❌ Ошибка: ${error.message}
+        </div>`;
+    }
+  };
+  reader.readAsText(file);
+}
+
+// Импорт событий из CSV
+async function importEventsFromCsv() {
+  const fileInput = document.getElementById('eventsCsvFile');
+  const file = fileInput.files[0];
+  
+  if (!file) {
+    alert('Выберите CSV файл');
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = async function(e) {
+    const csv = e.target.result;
+    
+    try {
+      const res = await fetch('/api/events/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ csv })
+      });
+
+      const result = await res.json();
+      
+      if (res.ok) {
+        document.getElementById('eventsImportResult').innerHTML = 
+          `<div style="background: #d1fae5; padding: 10px; border-radius: 4px; color: #065f46;">
+            ✅ Импортировано ${result.imported} событий
+          </div>`;
+        loadEvents(); // Перезагрузить список
+      } else {
+        document.getElementById('eventsImportResult').innerHTML = 
+          `<div style="background: #fee2e2; padding: 10px; border-radius: 4px; color: #991b1b;">
+            ❌ Ошибка: ${result.error}
+          </div>`;
+      }
+    } catch (error) {
+      document.getElementById('eventsImportResult').innerHTML = 
+        `<div style="background: #fee2e2; padding: 10px; border-radius: 4px; color: #991b1b;">
+          ❌ Ошибка: ${error.message}
+        </div>`;
+    }
+  };
+  reader.readAsText(file);
+}
 
     // ============ СОБЫТИЯ ============
     let allEvents = [];
