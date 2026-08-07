@@ -186,18 +186,6 @@
         <h2 id="selectedEventName">Событие</h2>
       </div>
 
-      <!-- Импорт спортсменов -->
-      <div class="card" id="importSection">
-        <h2>📥 Импорт спортсменов</h2>
-        <div class="import-section">
-          <p style="margin-bottom: 10px;">Загрузите список спортсменов из CSV файла</p>
-          <input type="file" id="csvFile" accept=".csv" />
-          <button class="btn btn-primary" onclick="importPlayers()">📥 Загрузить CSV</button>
-          <p style="font-size: 12px; color: #666; margin-top: 10px;">
-            Формат: full_name,birth_year,team,rank,gender
-          </p>
-        </div>
-      </div>
 
       <!-- Статистика -->
       <div class="stats-bar">
@@ -320,25 +308,31 @@
       document.getElementById('eventSelection').classList.remove('hidden');
     }
 
-    // Получить или создать команду
-    async function getOrCreateTeam() {
-      try {
-        const res = await fetch(`/api/teams/by-vk-id?vk_id=${vkUserInfo.id}`);
-        
-        if (res.ok) {
-          currentTeam = await res.json();
-        } else {
-          await createTeam();
-          return;
-        }
-
-        showTeamBuilder();
-        
-      } catch (error) {
-        console.error('Ошибка:', error);
-        await createTeam();
-      }
+  // Получить или создать команду
+async function getOrCreateTeam() {
+  try {
+    const res = await fetch(`/api/teams/by-vk-id?vk_id=${vkUserInfo.id}`);
+    
+    if (res.status === 404) {
+      // Команды нет — создаём новую
+      console.log('Команда не найдена, создаём новую...');
+      await createTeam();
+    } else if (res.ok) {
+      // Команда найдена
+      currentTeam = await res.json();
+      console.log('Найдена команда:', currentTeam);
+      showTeamBuilder();
+    } else {
+      // Другая ошибка
+      const err = await res.json();
+      console.error('Ошибка:', err);
+      alert('Ошибка: ' + err.error);
     }
+  } catch (error) {
+    console.error('Ошибка сети:', error);
+    alert('Ошибка сети: ' + error.message);
+  }
+}
 
     // Создание команды
     async function createTeam() {
