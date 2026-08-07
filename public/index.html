@@ -141,45 +141,62 @@
  
 async function initVK() {
   try {
-    console.log('🔄 Инициализация...');
+    console.log('🚀 Инициализация VK Mini App...');
     
-    // Проверяем, запущено ли приложение внутри VK
-    const isVK = window.location.search.includes('vk_platform=desktop') || 
-                 window.location.search.includes('vk_platform=mobile_android') ||
-                 window.location.search.includes('vk_platform=mobile_iphone') ||
-                 window.VKWebApp;
+    // Инициализируем VK Bridge
+    await VKBridge.send('VKWebAppInit', {});
+    console.log('✅ VK Bridge инициализирован');
 
-    if (isVK && window.VKWebApp) {
-      console.log(' Запуск внутри VK');
-      await VKWebApp.send('VKWebAppInit', {});
-      
-      const userData = await VKWebApp.send('VKWebAppGetUserInfo', {});
-      vkUserInfo = userData;
-      console.log('👤 Пользователь VK:', userData);
-    } else {
-      console.log('🌐 Запуск вне VK - используем обычную авторизацию');
-      // Для тестирования вне VK - моковые данные
-      vkUserInfo = {
-        first_name: 'Тест',
-        last_name: 'Пользователь',
-        id: 1
-      };
+    // Получаем данные пользователя
+    const userData = await VKBridge.send('VKWebAppGetUserInfo', {});
+    vkUserInfo = userData;
+    console.log('👤 Пользователь:', userData);
+
+    // Проверяем токен
+    const token = localStorage.getItem('vk_token');
+    
+    if (!token) {
+      console.log('️ Токен отсутствует, перенаправляем на авторизацию...');
+      // Перенаправляем на авторизацию VK
+      window.location.href = '/auth/vk';
+      return;
     }
 
-    // Скрываем загрузку
-    document.getElementById('loadingScreen').style.display = 'none';
-    document.getElementById('mainContent').style.display = 'block';
-
-    // Проверяем команду
-    await checkExistingTeam();
+    // Проверяем валидность токена
+    try {
+      const res = await fetch('/auth/me', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      if (!res.ok) {
+        console.log('⚠️ Токен недействителен, перенаправляем на авторизацию...');
+        localStorage.removeItem('vk_token');
+        window.location.href = '/auth/vk';
+        return;
+      }
+      
+      const user = await res.json();
+      console.log('✅ Авторизован:', user);
+      
+      // Токен валиден, продолжаем работу
+      document.getElementById('loadingScreen').style.display = 'none';
+      document.getElementById('mainContent').style.display = 'block';
+      
+      await checkExistingTeam();
+      
+    } catch (error) {
+      console.error('❌ Ошибка проверки токена:', error);
+      localStorage.removeItem('vk_token');
+      window.location.href = '/auth/vk';
+    }
     
   } catch (error) {
-    console.error('❌ Ошибка:', error);
+    console.error('❌ Ошибка инициализации VK:', error);
     document.getElementById('loadingScreen').innerHTML = `
-      <div style="background: #fee2e2; padding: 20px; border-radius: 8px;">
-        <h3 style="color: #991b1b;">⚠️ Ошибка загрузки</h3>
-        <p>${error.message}</p>
-        <button onclick="location.reload()">🔄 Повторить</button>
+      <div style="background: #fee2e2; padding: 20px; border-radius: 8px; border-left: 4px solid #ef4444;">
+        <h3 style="color: #991b1b; margin-bottom: 10px;">⚠️ Ошибка загрузки</h3>
+        <p style="color: #7f1d1d; margin-bottom: 15px;">${error.message}</p>
+        <button onclick="location.reload()" style="background: #ef4444; color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer;">🔄 Попробовать снова</button>
       </div>
     `;
   }
@@ -213,33 +230,43 @@ async function initVK() {
       }
     }
 
-    // Создание команды
-    async function createTeam() {
-      if (!vkUserInfo) return;
+async function createTeam() {
+  if (!vkUserInfo) {
+    alert('Ошибка: данные пользователя не получены');
+    return;
+  }
 
-      const teamName = `${vkUserInfo.first_name} ${vkUserInfo.last_name}`;
-      
-      try {
-        const res = await fetch('/api/teams', {
-          method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('vk_token')}`
-          },
-          body: JSON.stringify({ user_name: teamName })
-        });
+  const teamName = `${vkUserInfo.first_name} ${vkUserInfo.last_name}`;
+  const token = localStorage.getItem('vk_token');
+  
+  if (!token) {
+    alert('Ошибка: не авторизован. Перенаправляем на авторизацию...');
+    window.location.href = '/auth/vk';
+    return;
+  }
+  
+  try {
+    const res = await fetch('/api/teams', {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ user_name: teamName })
+    });
 
-        if (res.ok) {
-          currentTeam = await res.json();
-          showTeamBuilder();
-        } else {
-          const err = await res.json();
-          alert('Ошибка создания команды: ' + err.error);
-        }
-      } catch (error) {
-        console.error('Ошибка создания команды:', error);
-      }
+    if (res.ok) {
+      currentTeam = await res.json();
+      showTeamBuilder();
+    } else {
+      const err = await res.json();
+      alert('Ошибка создания команды: ' + err.error);
     }
+  } catch (error) {
+    console.error('Ошибка создания команды:', error);
+    alert('Ошибка: ' + error.message);
+  }
+}
 
     // Регистрация команды
     async function registerTeam() {

@@ -77,10 +77,17 @@ router.get('/callback', async (req, res) => {
 );
 
 res.send(`
-  <script>
-    localStorage.setItem('vk_token', '${token}');
-    window.location.href = '/';
-  <\/script>
+    <!DOCTYPE html>
+  <html>
+  <head><title>Авторизация...</title></head>
+  <body>
+    <script>
+      localStorage.setItem('vk_token', '${token}');
+      window.location.href = '/';
+    </script>
+    <p>Авторизация успешна. Перенаправление...</p>
+  </body>
+  </html>
 `);
 
     // Отправляем токен клиенту
