@@ -32,8 +32,6 @@ app.use(cors({
 }));
 
 require('dotenv').config();
-const { authenticateUser, requireAdmin } = require('./middleware/auth');
-const authRoutes = require('./routes/auth');
 const rateLimit = require('express-rate-limit');
 
 const limiter = rateLimit({
