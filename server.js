@@ -60,16 +60,21 @@ app.get('/auth/me', (req, res) => {
     res.status(401).json({ error: 'Недействительный токен' });
   }
 });
-// Получить команду текущего пользователя
-app.get('/api/teams/me', authenticateUser, (req, res) => {
-  const vk_id = req.user.vk_id;
+// Получить команду текущего пользователя (по vk_id)
+app.get('/api/teams/me', (req, res) => {
+  // В Mini Apps vk_id передаётся через заголовок или query
+  const vk_id = req.headers['x-vk-user-id'] || req.query.vk_id;
+  
+  if (!vk_id) {
+    return res.status(400).json({ error: 'VK ID не получен' });
+  }
+  
   const team = db.prepare('SELECT * FROM teams WHERE vk_id = ?').get(vk_id);
   
   if (!team) {
     return res.status(404).json({ error: 'Команда не найдена' });
   }
   
-  // Получаем игроков команды
   const players = db.prepare(`
     SELECT p.* FROM players p
     JOIN team_players tp ON p.id = tp.player_id
@@ -111,13 +116,14 @@ app.delete('/api/players/:id', (req, res) => {
 
 // ============ API ДЛЯ КОМАНД ============
 
-app.post('/api/teams', authenticateUser, (req, res) => {
-  const { user_name } = req.body;
-  const vk_id = req.user.vk_id;
+app.post('/api/teams', (req, res) => {
+  const { user_name, vk_id } = req.body;
   
-  if (!user_name) return res.status(400).json({ error: 'Укажите имя' });
+  if (!user_name || !vk_id) {
+    return res.status(400).json({ error: 'Не указаны имя или VK ID' });
+  }
   
-  // Проверяем, есть ли уже команда у этого пользователя
+  // Проверяем, есть ли уже команда
   const existingTeam = db.prepare('SELECT * FROM teams WHERE vk_id = ?').get(vk_id);
   if (existingTeam) {
     return res.status(400).json({ error: 'У вас уже есть команда' });

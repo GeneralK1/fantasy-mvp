@@ -3,42 +3,36 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Сборка команды - Фэнтези Лига</title>
-  <script src="https://cdn.jsdelivr.net/npm/@vkontakte/vk-bridge@2.15.0/dist/browser.min.js"></script>
+  <title>Фэнтези Лига</title>
+  <script src="https://unpkg.com/@vkontakte/vk-bridge/dist/browser.min.js"></script>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div class="container">
-    <!-- Экран загрузки -->
-    <div id="loadingScreen" style="text-align: center; padding: 50px;">
-      <div style="font-size: 24px; margin-bottom: 20px;">⏳ Загрузка...</div>
-      <div class="spinner" style="width: 50px; height: 50px; border: 5px solid #f3f3f3; border-top: 5px solid #667eea; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto;"></div>
-      <p style="margin-top: 20px; color: #666;">Инициализация приложения</p>
-    </div>
-      <!-- Основной контент (скрыт до инициализации) -->
-    <div id="mainContent" style="display: none;">
-      <div class="header">
-        <h1>🏆 Фэнтези Лига - Спортивный туризм</h1>
-        <nav>
-          <a href="/rankings.html">🏅 Рейтинги</a>
-          <a href="/events.html"> События</a>
-          <a href="/admin.html">⚙️ Админ-панель</a>
-        </nav>
-      </div>
+  <!-- Экран загрузки -->
+  <div id="loadingScreen" style="text-align: center; padding: 50px;">
+    <div style="font-size: 24px; margin-bottom: 20px;">⏳ Загрузка...</div>
+    <div class="spinner" style="width: 50px; height: 50px; border: 5px solid #f3f3f3; border-top: 5px solid #667eea; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto;"></div>
+    <p style="margin-top: 20px; color: #666;">Инициализация VK Mini App</p>
+  </div>
 
-    <!-- Загрузка -->
-    <div id="loading" style="text-align: center; padding: 50px;">
-      <div style="font-size: 24px; margin-bottom: 20px;"> Загрузка...</div>
-      <div class="spinner" style="width: 50px; height: 50px; border: 5px solid #f3f3f3; border-top: 5px solid #667eea; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto;"></div>
+  <!-- Основной контент -->
+  <div id="mainContent" style="display: none;">
+    <div class="header">
+      <h1>🏆 Фэнтези Лига - Спортивный туризм</h1>
+      <nav>
+        <a href="/rankings.html">🏅 Рейтинги</a>
+        <a href="/events.html">📅 События</a>
+        <a href="/admin.html">⚙️ Админ-панель</a>
+      </nav>
     </div>
 
-    <!-- Создание команды (автоматическое) -->
-    <div id="teamSetup" class="card hidden">
-      <h2> Создание команды</h2>
+    <!-- Создание команды -->
+    <div id="teamSetup" class="card">
+      <h2>👥 Шаг 1: Создание команды</h2>
       <div id="alert"></div>
       
       <div id="userInfo" style="background: #f0f9ff; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-        <p style="margin: 0; font-size: 16px;"> <strong id="userNameDisplay">Загрузка...</strong></p>
+        <p style="margin: 0; font-size: 16px;"><strong id="userNameDisplay">Загрузка...</strong></p>
         <p style="margin: 5px 0 0 0; color: #666; font-size: 14px;">Команда будет создана с этим именем</p>
       </div>
       
@@ -46,7 +40,7 @@
     </div>
 
     <!-- Интерфейс сборки команды -->
-    <div id="teamBuilder" class="hidden">
+    <div id="teamBuilder" style="display: none;">
       <!-- Статистика -->
       <div class="stats-bar">
         <div class="stat-box">
@@ -74,11 +68,6 @@
         <button class="btn" style="background: white; color: #059669; font-weight: bold; font-size: 16px;" onclick="registerTeam()">🚀 Зарегистрировать на событие</button>
       </div>
 
-      <div class="card" id="alreadyRegisteredBlock" style="display: none; background: #d1fae5; border-left: 4px solid #10b981;">
-        <h2 style="color: #065f46; margin-bottom: 10px;">✅ Команда зарегистрирована!</h2>
-        <p style="color: #065f46;">Состав зафиксирован. Изменить его больше нельзя.</p>
-      </div>
-
       <!-- Текущий состав -->
       <div class="card">
         <h2>✅ Ваш состав</h2>
@@ -90,41 +79,9 @@
       <!-- Список доступных спортсменов -->
       <div class="card">
         <h2>📋 Доступные спортсмены</h2>
-
         <div class="search-box">
-          <input type="text" id="searchInput" placeholder=" Поиск по имени, команде или разряду...">
+          <input type="text" id="searchInput" placeholder="🔍 Поиск по имени, команде или разряду...">
         </div>
-
-        <div class="filters-section">
-          <div class="filter-group">
-            <label>Пол:</label>
-            <div class="filter-bar" id="genderFilters">
-              <button class="filter-btn active" data-filter="gender" data-value="all">Все</button>
-              <button class="filter-btn" data-filter="gender" data-value="male">Мужчины</button>
-              <button class="filter-btn" data-filter="gender" data-value="female">Женщины</button>
-            </div>
-          </div>
-
-          <div class="filter-group">
-            <label>Команда:</label>
-            <div class="filter-bar" id="teamFilters">
-              <button class="filter-btn active" data-filter="team" data-value="all">Все</button>
-            </div>
-          </div>
-
-          <div class="filter-group">
-            <label>Разряд:</label>
-            <div class="filter-bar" id="rankFilters">
-              <button class="filter-btn active" data-filter="rank" data-value="all">Все</button>
-            </div>
-          </div>
-        </div>
-
-        <div class="reset-filters">
-          <button class="btn btn-danger" id="resetBtn">🔄 Сбросить фильтры</button>
-          <span id="resultsCount" style="margin-left: 10px; color: #666; font-size: 13px;"></span>
-        </div>
-
         <div id="playersList" class="players-grid"></div>
       </div>
     </div>
@@ -137,293 +94,156 @@
     let teamPlayers = [];
     let isRegistered = false;
 
+    // Инициализация VK Mini App
+    async function initVK() {
+      try {
+        console.log('🚀 Инициализация VK Mini App...');
+        
+        // Инициализируем VK Bridge
+        await vkBridge.send('VKWebAppInit', {});
+        console.log('✅ VK Bridge инициализирован');
 
- 
-async function initVK() {
-  try {
-    console.log('🚀 Инициализация VK Mini App...');
-    console.log('vkBridge доступен:', typeof vkBridge !== 'undefined');
-    
-    // Инициализируем VK Bridge
-    await vkBridge.send('VKWebAppInit', {});
-    console.log('✅ VK Bridge инициализирован');
+        // Получаем данные пользователя (АВТОМАТИЧЕСКИ!)
+        const userData = await vkBridge.send('VKWebAppGetUserInfo', {});
+        vkUserInfo = userData;
+        console.log('👤 Пользователь:', userData);
 
-    // Получаем данные пользователя
-    const userData = await vkBridge.send('VKWebAppGetUserInfo', {});
-    vkUserInfo = userData;
-    console.log('👤 Пользователь:', userData);
+        // Показываем имя пользователя
+        document.getElementById('userNameDisplay').textContent = 
+          `${userData.first_name} ${userData.last_name}`;
 
-    // Проверяем токен
-    const token = localStorage.getItem('vk_token');
-    
-    if (!token) {
-      console.log('️ Токен отсутствует, перенаправляем на авторизацию...');
-      // Перенаправляем на авторизацию VK
-      window.location.href = '/auth/vk';
-      return;
-    }
+        // Скрываем экран загрузки
+        document.getElementById('loadingScreen').style.display = 'none';
+        document.getElementById('mainContent').style.display = 'block';
 
-    // Проверяем валидность токена
-    try {
-      const res = await fetch('/auth/me', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      
-      if (!res.ok) {
-        console.log('⚠️ Токен недействителен, перенаправляем на авторизацию...');
-        localStorage.removeItem('vk_token');
-        window.location.href = '/auth/vk';
-        return;
+        // Проверяем, есть ли уже команда
+        await checkExistingTeam();
+        
+      } catch (error) {
+        console.error('❌ Ошибка инициализации VK:', error);
+        document.getElementById('loadingScreen').innerHTML = `
+          <div style="background: #fee2e2; padding: 20px; border-radius: 8px; border-left: 4px solid #ef4444;">
+            <h3 style="color: #991b1b; margin-bottom: 10px;">⚠️ Ошибка загрузки</h3>
+            <p style="color: #7f1d1d; margin-bottom: 15px;">Не удалось подключиться к VK</p>
+            <button onclick="location.reload()" style="background: #ef4444; color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer;">🔄 Попробовать снова</button>
+          </div>
+        `;
       }
-      
-      const user = await res.json();
-      console.log('✅ Авторизован:', user);
-      
-      // Токен валиден, продолжаем работу
-      document.getElementById('loadingScreen').style.display = 'none';
-      document.getElementById('mainContent').style.display = 'block';
-      
-      await checkExistingTeam();
-      
-    } catch (error) {
-      console.error('❌ Ошибка проверки токена:', error);
-      localStorage.removeItem('vk_token');
-      window.location.href = '/auth/vk';
     }
-    
-  } catch (error) {
-    console.error('❌ Ошибка инициализации VK:', error);
-    document.getElementById('loadingScreen').innerHTML = `
-      <div style="background: #fee2e2; padding: 20px; border-radius: 8px; border-left: 4px solid #ef4444;">
-        <h3 style="color: #991b1b; margin-bottom: 10px;">⚠️ Ошибка загрузки</h3>
-        <p style="color: #7f1d1d; margin-bottom: 15px;">${error.message}</p>
-        <button onclick="location.reload()" style="background: #ef4444; color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer;">🔄 Попробовать снова</button>
-      </div>
-    `;
-  }
-}
 
     // Проверка существующей команды
     async function checkExistingTeam() {
       try {
-        const token = localStorage.getItem('vk_token');
+        const res = await fetch('/api/teams/me');
         
-        if (!token) {
-          // Создаем команду автоматически
-          await createTeam();
-          return;
-        }
-
-        // Проверяем токен и получаем информацию о команде
-        const res = await fetch('/api/teams/me', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-
         if (res.ok) {
           currentTeam = await res.json();
           showTeamBuilder();
         } else {
-          await createTeam();
+          // Команды нет, показываем форму создания
+          document.getElementById('teamSetup').style.display = 'block';
         }
       } catch (error) {
         console.error('Ошибка проверки команды:', error);
-        await createTeam();
+        document.getElementById('teamSetup').style.display = 'block';
       }
     }
 
-async function createTeam() {
-  if (!vkUserInfo) {
-    alert('Ошибка: данные пользователя не получены');
-    return;
-  }
+    // Создание команды
+    async function createTeam() {
+      if (!vkUserInfo) {
+        showAlert('Ошибка: данные пользователя не получены', 'error');
+        return;
+      }
 
-  const teamName = `${vkUserInfo.first_name} ${vkUserInfo.last_name}`;
-  const token = localStorage.getItem('vk_token');
-  
-  if (!token) {
-    alert('Ошибка: не авторизован. Перенаправляем на авторизацию...');
-    window.location.href = '/auth/vk';
-    return;
-  }
-  
-  try {
-    const res = await fetch('/api/teams', {
-      method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({ user_name: teamName })
-    });
-
-    if (res.ok) {
-      currentTeam = await res.json();
-      showTeamBuilder();
-    } else {
-      const err = await res.json();
-      alert('Ошибка создания команды: ' + err.error);
-    }
-  } catch (error) {
-    console.error('Ошибка создания команды:', error);
-    alert('Ошибка: ' + error.message);
-  }
-}
-
-    // Регистрация команды
-    async function registerTeam() {
-      if (!confirm('Вы уверены? После регистрации состав изменить будет нельзя!')) return;
-
-      const res = await fetch(`/api/teams/${currentTeam.id}/register`, { 
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('vk_token')}` }
-      });
+      const teamName = `${vkUserInfo.first_name} ${vkUserInfo.last_name}`;
       
-      if (res.ok) {
-        isRegistered = true;
-        document.getElementById('registrationBlock').style.display = 'none';
-        document.getElementById('alreadyRegisteredBlock').style.display = 'block';
-        showAlert('Команда зарегистрирована!', 'success');
-      } else {
-        const err = await res.json();
-        showAlert(err.error, 'error');
+      try {
+        const res = await fetch('/api/teams', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            user_name: teamName,
+            vk_id: vkUserInfo.id 
+          })
+        });
+
+        if (res.ok) {
+          currentTeam = await res.json();
+          document.getElementById('teamSetup').style.display = 'none';
+          showTeamBuilder();
+          showAlert('Команда создана!', 'success');
+        } else {
+          const err = await res.json();
+          showAlert(err.error, 'error');
+        }
+      } catch (error) {
+        showAlert('Ошибка: ' + error.message, 'error');
       }
     }
 
+    function showTeamBuilder() {
+      document.getElementById('teamSetup').style.display = 'none';
+      document.getElementById('teamBuilder').style.display = 'block';
+      document.getElementById('teamNameDisplay').textContent = currentTeam.user_name;
+      loadPlayers();
+      loadTeam();
+    }
+
+    // Загрузка игроков
     async function loadPlayers() {
       const res = await fetch('/api/players');
       allPlayers = await res.json();
-      buildFilterButtons();
-      applyFilters();
-    }
-
-    function buildFilterButtons() {
-      const teams = [...new Set(allPlayers.map(p => p.team))].sort();
-      const teamContainer = document.getElementById('teamFilters');
-      teamContainer.innerHTML = '';
-      teamContainer.appendChild(createFilterButton('team', 'all', 'Все', true));
-      teams.forEach(t => teamContainer.appendChild(createFilterButton('team', t, t, false)));
-
-      const rankContainer = document.getElementById('rankFilters');
-      rankContainer.innerHTML = '';
-      rankContainer.appendChild(createFilterButton('rank', 'all', 'Все', true));
-      rankOrder.forEach(r => {
-        if (allPlayers.some(p => p.rank === r)) {
-          rankContainer.appendChild(createFilterButton('rank', r, r, false));
-        }
-      });
-    }
-
-    function createFilterButton(filterName, value, text, isActive) {
-      const btn = document.createElement('button');
-      btn.className = 'filter-btn' + (isActive ? ' active' : '');
-      btn.dataset.filter = filterName;
-      btn.dataset.value = value;
-      btn.textContent = text;
-      return btn;
-    }
-
-    function setFilter(filterName, value, clickedBtn) {
-      activeFilters[filterName] = value;
-      const group = clickedBtn.parentElement;
-      group.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-      clickedBtn.classList.add('active');
-      applyFilters();
-    }
-
-    function setupFilterListeners() {
-      ['genderFilters', 'teamFilters', 'rankFilters'].forEach(groupId => {
-        const container = document.getElementById(groupId);
-        container.addEventListener('click', (e) => {
-          if (e.target.classList.contains('filter-btn')) {
-            setFilter(e.target.dataset.filter, e.target.dataset.value, e.target);
-          }
-        });
-      });
-    }
-
-    function applyFilters() {
-      let filtered = allPlayers.filter(p => {
-        if (activeFilters.gender !== 'all' && p.gender !== activeFilters.gender) return false;
-        if (activeFilters.team !== 'all' && p.team !== activeFilters.team) return false;
-        if (activeFilters.rank !== 'all' && p.rank !== activeFilters.rank) return false;
-        if (activeFilters.search && !(`${p.full_name} ${p.team} ${p.rank}`.toLowerCase().includes(activeFilters.search.toLowerCase()))) return false;
-        return true;
-      });
-
-      filtered = filtered.filter(p => !teamPlayers.find(tp => tp.id === p.id));
-      renderPlayers(filtered);
-    }
-
-    function resetFilters() {
-      activeFilters = { gender: 'all', team: 'all', rank: 'all', search: '' };
-      document.getElementById('searchInput').value = '';
-      document.querySelectorAll('.filter-bar').forEach(bar => {
-        bar.querySelectorAll('.filter-btn').forEach((btn, idx) => btn.classList.toggle('active', idx === 0));
-      });
-      applyFilters();
+      renderPlayers(allPlayers);
     }
 
     function renderPlayers(players) {
       const list = document.getElementById('playersList');
-      document.getElementById('resultsCount').textContent = `Найдено: ${players.length}`;
-
+      
       if (players.length === 0) {
-        list.innerHTML = '<p style="color: #999; grid-column: 1/-1;">Нет доступных спортсменов</p>';
+        list.innerHTML = '<p style="color: #999;">Нет доступных спортсменов</p>';
         return;
       }
 
       list.innerHTML = players.map(p => `
-        <div class="player-card gender-${p.gender}">
+        <div class="player-card">
           <div class="player-info">
             <h3>${p.full_name}</h3>
             <p>📅 ${p.birth_year} г.р.</p>
-            <p>🏃 ${p.team}</p>
-            <p> ${p.rank}</p>
-            <p>${p.gender === 'male' ? '♂ Мужчина' : '♀ Женщина'}</p>
+            <p> ${p.team}</p>
+            <p>🏆 ${p.rank}</p>
           </div>
           <button class="btn btn-success" onclick="addPlayer(${p.id})">Добавить</button>
         </div>
       `).join('');
     }
 
+    // Добавление игрока
     async function addPlayer(playerId) {
-      const res = await fetch(`/api/teams/${currentTeam.id}/players`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('vk_token')}`
-        },
-        body: JSON.stringify({ player_id: playerId })
-      });
+      try {
+        const res = await fetch(`/api/teams/${currentTeam.id}/players`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ player_id: playerId })
+        });
 
-      if (res.ok) {
-        await loadTeam();
-        applyFilters();
-      } else {
-        const err = await res.json();
-        showAlert(err.error, 'error');
+        if (res.ok) {
+          await loadTeam();
+          loadPlayers();
+        } else {
+          const err = await res.json();
+          showAlert(err.error, 'error');
+        }
+      } catch (error) {
+        showAlert('Ошибка: ' + error.message, 'error');
       }
     }
 
-    async function removePlayer(playerId) {
-      if (isRegistered) {
-        showAlert('Нельзя удалить спортсмена из зарегистрированной команды!', 'error');
-        return;
-      }
-      await fetch(`/api/teams/${currentTeam.id}/players/${playerId}`, { 
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('vk_token')}` }
-      });
-      await loadTeam();
-      applyFilters();
-    }
-
+    // Загрузка команды
     async function loadTeam() {
-      const res = await fetch(`/api/teams/${currentTeam.id}`, {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('vk_token')}` }
-      });
+      const res = await fetch(`/api/teams/${currentTeam.id}`);
       const team = await res.json();
-      teamPlayers = team.players;
+      teamPlayers = team.players || [];
 
       const males = teamPlayers.filter(p => p.gender === 'male').length;
       const females = teamPlayers.filter(p => p.gender === 'female').length;
@@ -435,25 +255,48 @@ async function createTeam() {
 
       const teamDiv = document.getElementById('currentTeam');
       if (total === 0) {
-        teamDiv.innerHTML = '<p style="color: #999;">Команда пуста. Добавьте спортсменов ниже.</p>';
+        teamDiv.innerHTML = '<p style="color: #999;">Команда пуста</p>';
       } else {
         teamDiv.innerHTML = teamPlayers.map(p => `
           <div class="team-slot filled">
             <div class="player-info">
               <h3>${p.full_name}</h3>
-              <p>${p.team} • ${p.rank} • ${p.gender === 'male' ? '♂' : '♀'}</p>
+              <p>${p.team} • ${p.rank}</p>
             </div>
-            <button class="btn btn-danger" onclick="removePlayer(${p.id})" ${isRegistered ? 'disabled style="opacity:0.5;cursor:not-allowed;"' : ''}>
-              ${isRegistered ? 'Зафиксирован' : 'Удалить'}
-            </button>
+            <button class="btn btn-danger" onclick="removePlayer(${p.id})">Удалить</button>
           </div>
         `).join('');
       }
 
-      if (total === 8 && !isRegistered) {
+      if (total === 8) {
         document.getElementById('registrationBlock').style.display = 'block';
-      } else {
+      }
+    }
+
+    // Удаление игрока
+    async function removePlayer(playerId) {
+      await fetch(`/api/teams/${currentTeam.id}/players/${playerId}`, { 
+        method: 'DELETE' 
+      });
+      await loadTeam();
+      loadPlayers();
+    }
+
+    // Регистрация команды
+    async function registerTeam() {
+      if (!confirm('Вы уверены? После регистрации состав изменить будет нельзя!')) return;
+
+      const res = await fetch(`/api/teams/${currentTeam.id}/register`, { 
+        method: 'POST' 
+      });
+      
+      if (res.ok) {
+        isRegistered = true;
         document.getElementById('registrationBlock').style.display = 'none';
+        showAlert('Команда зарегистрирована!', 'success');
+      } else {
+        const err = await res.json();
+        showAlert(err.error, 'error');
       }
     }
 
@@ -463,19 +306,18 @@ async function createTeam() {
       setTimeout(() => el.innerHTML = '', 3000);
     }
 
-    // Запуск
-    document.addEventListener('DOMContentLoaded', () => {
-      setupFilterListeners();
-      
-      document.getElementById('searchInput').addEventListener('input', (e) => {
-        activeFilters.search = e.target.value;
-        applyFilters();
-      });
-      
-      document.getElementById('resetBtn').addEventListener('click', resetFilters);
-      
-      initVK();
+    // Поиск
+    document.getElementById('searchInput')?.addEventListener('input', (e) => {
+      const search = e.target.value.toLowerCase();
+      const filtered = allPlayers.filter(p => 
+        p.full_name.toLowerCase().includes(search) ||
+        p.team.toLowerCase().includes(search)
+      );
+      renderPlayers(filtered);
     });
+
+    // Запуск
+    document.addEventListener('DOMContentLoaded', initVK);
   </script>
 
   <style>
@@ -483,6 +325,39 @@ async function createTeam() {
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
     }
+    
+    .player-card {
+      background: white;
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .team-slot {
+      background: #f0f9ff;
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    
+    .btn-primary { background: #667eea; color: white; }
+    .btn-success { background: #10b981; color: white; }
+    .btn-danger { background: #ef4444; color: white; }
   </style>
 </body>
 </html>
