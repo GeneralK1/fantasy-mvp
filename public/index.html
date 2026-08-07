@@ -3,49 +3,282 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Фэнтези Лига</title>
+  <title>Фэнтези Лига - Спортивный туризм</title>
   <script src="https://unpkg.com/@vkontakte/vk-bridge/dist/browser.min.js"></script>
   <link rel="stylesheet" href="style.css">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .header {
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 16px;
+      padding: 20px 30px;
+      margin-bottom: 20px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .header h1 {
+      font-size: 24px;
+      color: #667eea;
+    }
+
+    .nav {
+      display: flex;
+      gap: 15px;
+    }
+
+    .nav a {
+      text-decoration: none;
+      color: #666;
+      font-weight: 500;
+      padding: 8px 16px;
+      border-radius: 8px;
+      transition: all 0.3s;
+    }
+
+    .nav a:hover {
+      background: #667eea;
+      color: white;
+    }
+
+    .card {
+      background: white;
+      border-radius: 16px;
+      padding: 25px;
+      margin-bottom: 20px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+    }
+
+    .card h2 {
+      font-size: 20px;
+      margin-bottom: 20px;
+      color: #333;
+    }
+
+    .stats-bar {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+
+    .stat-box {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+    }
+
+    .stat-box h3 {
+      font-size: 14px;
+      color: #666;
+      margin-bottom: 8px;
+    }
+
+    .stat-box .value {
+      font-size: 28px;
+      font-weight: bold;
+      color: #667eea;
+    }
+
+    .players-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 15px;
+      margin-top: 20px;
+    }
+
+    .player-card {
+      background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+      border-radius: 12px;
+      padding: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: transform 0.2s;
+    }
+
+    .player-card:hover {
+      transform: translateY(-2px);
+    }
+
+    .player-info h3 {
+      font-size: 16px;
+      margin-bottom: 8px;
+      color: #333;
+    }
+
+    .player-info p {
+      font-size: 13px;
+      color: #666;
+      margin-bottom: 4px;
+    }
+
+    .team-slot {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .team-slot .player-info h3 {
+      color: white;
+    }
+
+    .team-slot .player-info p {
+      color: rgba(255,255,255,0.9);
+    }
+
+    .btn {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 14px;
+      transition: all 0.3s;
+    }
+
+    .btn-primary {
+      background: #667eea;
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #5568d3;
+      transform: translateY(-2px);
+    }
+
+    .btn-success {
+      background: #10b981;
+      color: white;
+    }
+
+    .btn-success:hover {
+      background: #059669;
+    }
+
+    .btn-danger {
+      background: #ef4444;
+      color: white;
+      padding: 8px 16px;
+      font-size: 12px;
+    }
+
+    .btn-danger:hover {
+      background: #dc2626;
+    }
+
+    .search-box {
+      margin-bottom: 20px;
+    }
+
+    .search-box input {
+      width: 100%;
+      padding: 12px 20px;
+      border: 2px solid #e5e7eb;
+      border-radius: 8px;
+      font-size: 14px;
+      transition: border-color 0.3s;
+    }
+
+    .search-box input:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    .alert {
+      padding: 12px 20px;
+      border-radius: 8px;
+      margin-bottom: 15px;
+      font-weight: 500;
+    }
+
+    .alert-success {
+      background: #d1fae5;
+      color: #065f46;
+    }
+
+    .alert-error {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    #loadingScreen {
+      text-align: center;
+      padding: 100px 20px;
+      color: white;
+    }
+
+    .spinner {
+      width: 60px;
+      height: 60px;
+      border: 5px solid rgba(255,255,255,0.3);
+      border-top: 5px solid white;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 20px auto;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .hidden {
+      display: none !important;
+    }
+  </style>
 </head>
 <body>
-  <!-- Экран загрузки -->
-  <div id="loadingScreen" style="text-align: center; padding: 50px;">
-    <div style="font-size: 24px; margin-bottom: 20px;">⏳ Загрузка...</div>
-    <div class="spinner" style="width: 50px; height: 50px; border: 5px solid #f3f3f3; border-top: 5px solid #667eea; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto;"></div>
-    <p style="margin-top: 20px; color: #666;">Инициализация VK Mini App</p>
-  </div>
-
-  <!-- Основной контент -->
-  <div id="mainContent" style="display: none;">
-    <div class="header">
-      <h1>🏆 Фэнтези Лига - Спортивный туризм</h1>
-      <nav>
-        <a href="/rankings.html">🏅 Рейтинги</a>
-        <a href="/events.html">📅 События</a>
-        <a href="/admin.html">⚙️ Админ-панель</a>
-      </nav>
+  <div class="container">
+    <!-- Экран загрузки -->
+    <div id="loadingScreen">
+      <div style="font-size: 28px; margin-bottom: 20px;">⏳ Загрузка...</div>
+      <div class="spinner"></div>
+      <p style="font-size: 16px; opacity: 0.9;">Инициализация VK Mini App</p>
     </div>
 
-    <!-- Создание команды -->
-    <div id="teamSetup" class="card">
-      <h2>👥 Шаг 1: Создание команды</h2>
-      <div id="alert"></div>
-      
-      <div id="userInfo" style="background: #f0f9ff; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-        <p style="margin: 0; font-size: 16px;"><strong id="userNameDisplay">Загрузка...</strong></p>
-        <p style="margin: 5px 0 0 0; color: #666; font-size: 14px;">Команда будет создана с этим именем</p>
+    <!-- Основной контент -->
+    <div id="mainContent" class="hidden">
+      <div class="header">
+        <h1>🏆 Фэнтези Лига - Спортивный туризм</h1>
+        <nav class="nav">
+          <a href="/rankings.html">🏅 Рейтинги</a>
+          <a href="/events.html"> События</a>
+          <a href="/admin.html" id="adminLink" class="hidden">⚙️ Админ</a>
+        </nav>
       </div>
-      
-      <button class="btn btn-primary" onclick="createTeam()">✅ Создать команду</button>
-    </div>
 
-    <!-- Интерфейс сборки команды -->
-    <div id="teamBuilder" style="display: none;">
       <!-- Статистика -->
       <div class="stats-bar">
         <div class="stat-box">
           <h3>Команда</h3>
-          <div class="value" id="teamNameDisplay">-</div>
+          <div class="value" id="teamNameDisplay" style="font-size: 18px;">-</div>
         </div>
         <div class="stat-box">
           <h3>Мужчины</h3>
@@ -61,8 +294,8 @@
         </div>
       </div>
 
-      <!-- Кнопка регистрации -->
-      <div class="card" id="registrationBlock" style="display: none; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white;">
+      <!-- Уведомление о регистрации -->
+      <div class="card hidden" id="registrationBlock" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white;">
         <h2 style="color: white; margin-bottom: 10px;">✅ Команда собрана!</h2>
         <p style="margin-bottom: 15px;">Вы набрали 8 спортсменов. Теперь команду можно зарегистрировать.</p>
         <button class="btn" style="background: white; color: #059669; font-weight: bold; font-size: 16px;" onclick="registerTeam()">🚀 Зарегистрировать на событие</button>
@@ -72,15 +305,15 @@
       <div class="card">
         <h2>✅ Ваш состав</h2>
         <div id="currentTeam">
-          <p style="color: #999;">Команда пуста. Добавьте спортсменов ниже.</p>
+          <p style="color: #999; text-align: center; padding: 20px;">Команда пуста. Добавьте спортсменов ниже.</p>
         </div>
       </div>
 
       <!-- Список доступных спортсменов -->
       <div class="card">
-        <h2>📋 Доступные спортсмены</h2>
+        <h2> Доступные спортсмены</h2>
         <div class="search-box">
-          <input type="text" id="searchInput" placeholder="🔍 Поиск по имени, команде или разряду...">
+          <input type="text" id="searchInput" placeholder=" Поиск по имени, команде или разряду...">
         </div>
         <div id="playersList" class="players-grid"></div>
       </div>
@@ -108,54 +341,57 @@
         vkUserInfo = userData;
         console.log('👤 Пользователь:', userData);
 
-        // Показываем имя пользователя
-        document.getElementById('userNameDisplay').textContent = 
-          `${userData.first_name} ${userData.last_name}`;
-
         // Скрываем экран загрузки
-        document.getElementById('loadingScreen').style.display = 'none';
-        document.getElementById('mainContent').style.display = 'block';
+        document.getElementById('loadingScreen').classList.add('hidden');
+        document.getElementById('mainContent').classList.remove('hidden');
 
-        // Проверяем, есть ли уже команда
-        await checkExistingTeam();
+        // Проверяем, является ли пользователь админом
+        if (userData.id === 416323498) { // Замените на ваш VK ID
+          document.getElementById('adminLink').classList.remove('hidden');
+        }
+
+        // Автоматически создаём или получаем команду
+        await getOrCreateTeam();
         
       } catch (error) {
         console.error('❌ Ошибка инициализации VK:', error);
         document.getElementById('loadingScreen').innerHTML = `
-          <div style="background: #fee2e2; padding: 20px; border-radius: 8px; border-left: 4px solid #ef4444;">
-            <h3 style="color: #991b1b; margin-bottom: 10px;">⚠️ Ошибка загрузки</h3>
-            <p style="color: #7f1d1d; margin-bottom: 15px;">Не удалось подключиться к VK</p>
-            <button onclick="location.reload()" style="background: #ef4444; color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer;">🔄 Попробовать снова</button>
+          <div style="background: rgba(255,255,255,0.95); padding: 30px; border-radius: 16px; max-width: 500px; margin: 0 auto;">
+            <h3 style="color: #991b1b; margin-bottom: 15px;">⚠️ Ошибка загрузки</h3>
+            <p style="color: #7f1d1d; margin-bottom: 20px;">Не удалось подключиться к VK</p>
+            <button onclick="location.reload()" class="btn btn-danger">🔄 Попробовать снова</button>
           </div>
         `;
       }
     }
 
-    // Проверка существующей команды
-    async function checkExistingTeam() {
+    // Получить или создать команду
+    async function getOrCreateTeam() {
       try {
-        const res = await fetch('/api/teams/me');
+        // Пробуем получить существующую команду
+        const res = await fetch(`/api/teams/by-vk-id?vk_id=${vkUserInfo.id}`);
         
         if (res.ok) {
           currentTeam = await res.json();
-          showTeamBuilder();
+          console.log('✅ Найдена существующая команда:', currentTeam);
         } else {
-          // Команды нет, показываем форму создания
-          document.getElementById('teamSetup').style.display = 'block';
+          // Создаём новую команду
+          console.log('🆕 Создаём новую команду...');
+          await createTeam();
+          return;
         }
+
+        // Показываем интерфейс
+        showTeamBuilder();
+        
       } catch (error) {
-        console.error('Ошибка проверки команды:', error);
-        document.getElementById('teamSetup').style.display = 'block';
+        console.error('Ошибка получения команды:', error);
+        await createTeam();
       }
     }
 
     // Создание команды
     async function createTeam() {
-      if (!vkUserInfo) {
-        showAlert('Ошибка: данные пользователя не получены', 'error');
-        return;
-      }
-
       const teamName = `${vkUserInfo.first_name} ${vkUserInfo.last_name}`;
       
       try {
@@ -170,21 +406,20 @@
 
         if (res.ok) {
           currentTeam = await res.json();
-          document.getElementById('teamSetup').style.display = 'none';
+          console.log('✅ Команда создана:', currentTeam);
           showTeamBuilder();
-          showAlert('Команда создана!', 'success');
         } else {
           const err = await res.json();
-          showAlert(err.error, 'error');
+          console.error('Ошибка создания команды:', err);
+          alert('Ошибка: ' + err.error);
         }
       } catch (error) {
-        showAlert('Ошибка: ' + error.message, 'error');
+        console.error('Ошибка:', error);
+        alert('Ошибка: ' + error.message);
       }
     }
 
     function showTeamBuilder() {
-      document.getElementById('teamSetup').style.display = 'none';
-      document.getElementById('teamBuilder').style.display = 'block';
       document.getElementById('teamNameDisplay').textContent = currentTeam.user_name;
       loadPlayers();
       loadTeam();
@@ -200,18 +435,22 @@
     function renderPlayers(players) {
       const list = document.getElementById('playersList');
       
-      if (players.length === 0) {
-        list.innerHTML = '<p style="color: #999;">Нет доступных спортсменов</p>';
+      // Фильтруем уже добавленных игроков
+      const available = players.filter(p => !teamPlayers.find(tp => tp.id === p.id));
+      
+      if (available.length === 0) {
+        list.innerHTML = '<p style="color: #999; text-align: center; padding: 20px; grid-column: 1/-1;">Нет доступных спортсменов</p>';
         return;
       }
 
-      list.innerHTML = players.map(p => `
+      list.innerHTML = available.map(p => `
         <div class="player-card">
           <div class="player-info">
             <h3>${p.full_name}</h3>
             <p>📅 ${p.birth_year} г.р.</p>
-            <p> ${p.team}</p>
+            <p>🏃 ${p.team}</p>
             <p>🏆 ${p.rank}</p>
+            <p>${p.gender === 'male' ? '♂ Мужчина' : '♀ Женщина'}</p>
           </div>
           <button class="btn btn-success" onclick="addPlayer(${p.id})">Добавить</button>
         </div>
@@ -232,10 +471,10 @@
           loadPlayers();
         } else {
           const err = await res.json();
-          showAlert(err.error, 'error');
+          alert('Ошибка: ' + err.error);
         }
       } catch (error) {
-        showAlert('Ошибка: ' + error.message, 'error');
+        alert('Ошибка: ' + error.message);
       }
     }
 
@@ -255,26 +494,30 @@
 
       const teamDiv = document.getElementById('currentTeam');
       if (total === 0) {
-        teamDiv.innerHTML = '<p style="color: #999;">Команда пуста</p>';
+        teamDiv.innerHTML = '<p style="color: #999; text-align: center; padding: 20px;">Команда пуста. Добавьте спортсменов ниже.</p>';
       } else {
         teamDiv.innerHTML = teamPlayers.map(p => `
-          <div class="team-slot filled">
+          <div class="team-slot">
             <div class="player-info">
               <h3>${p.full_name}</h3>
-              <p>${p.team} • ${p.rank}</p>
+              <p>${p.team} • ${p.rank} • ${p.gender === 'male' ? '♂' : '♀'}</p>
             </div>
             <button class="btn btn-danger" onclick="removePlayer(${p.id})">Удалить</button>
           </div>
         `).join('');
       }
 
-      if (total === 8) {
-        document.getElementById('registrationBlock').style.display = 'block';
+      if (total === 8 && !isRegistered) {
+        document.getElementById('registrationBlock').classList.remove('hidden');
       }
     }
 
     // Удаление игрока
     async function removePlayer(playerId) {
+      if (isRegistered) {
+        alert('Нельзя удалить спортсмена из зарегистрированной команды!');
+        return;
+      }
       await fetch(`/api/teams/${currentTeam.id}/players/${playerId}`, { 
         method: 'DELETE' 
       });
@@ -292,18 +535,12 @@
       
       if (res.ok) {
         isRegistered = true;
-        document.getElementById('registrationBlock').style.display = 'none';
-        showAlert('Команда зарегистрирована!', 'success');
+        document.getElementById('registrationBlock').classList.add('hidden');
+        alert('✅ Команда зарегистрирована!');
       } else {
         const err = await res.json();
-        showAlert(err.error, 'error');
+        alert('Ошибка: ' + err.error);
       }
-    }
-
-    function showAlert(msg, type) {
-      const el = document.getElementById('alert');
-      el.innerHTML = `<div class="alert alert-${type}">${msg}</div>`;
-      setTimeout(() => el.innerHTML = '', 3000);
     }
 
     // Поиск
@@ -311,7 +548,8 @@
       const search = e.target.value.toLowerCase();
       const filtered = allPlayers.filter(p => 
         p.full_name.toLowerCase().includes(search) ||
-        p.team.toLowerCase().includes(search)
+        p.team.toLowerCase().includes(search) ||
+        p.rank.toLowerCase().includes(search)
       );
       renderPlayers(filtered);
     });
@@ -319,45 +557,5 @@
     // Запуск
     document.addEventListener('DOMContentLoaded', initVK);
   </script>
-
-  <style>
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-    
-    .player-card {
-      background: white;
-      border-radius: 8px;
-      padding: 15px;
-      margin-bottom: 10px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-    
-    .team-slot {
-      background: #f0f9ff;
-      border-radius: 8px;
-      padding: 15px;
-      margin-bottom: 10px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    
-    .btn {
-      padding: 10px 20px;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      font-weight: bold;
-    }
-    
-    .btn-primary { background: #667eea; color: white; }
-    .btn-success { background: #10b981; color: white; }
-    .btn-danger { background: #ef4444; color: white; }
-  </style>
 </body>
 </html>

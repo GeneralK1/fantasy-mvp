@@ -208,6 +208,29 @@ app.get('/api/teams', (req, res) => {
   res.json(teams);
 });
 
+// Получить команду по vk_id
+app.get('/api/teams/by-vk-id', (req, res) => {
+  const vk_id = req.query.vk_id;
+  
+  if (!vk_id) {
+    return res.status(400).json({ error: 'VK ID не указан' });
+  }
+  
+  const team = db.prepare('SELECT * FROM teams WHERE vk_id = ?').get(vk_id);
+  
+  if (!team) {
+    return res.status(404).json({ error: 'Команда не найдена' });
+  }
+  
+  const players = db.prepare(`
+    SELECT p.* FROM players p
+    JOIN team_players tp ON p.id = tp.player_id
+    WHERE tp.team_id = ?
+  `).all(team.id);
+  
+  res.json({ ...team, players });
+});
+
 // ============ API ДЛЯ СОБЫТИЙ ============
 
 app.get('/api/events', (req, res) => {
