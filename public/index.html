@@ -5,26 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Фэнтези Лига - Спортивный туризм</title>
   <script src="https://unpkg.com/@vkontakte/vk-bridge/dist/browser.min.js"></script>
-  <link rel="stylesheet" href="style.css">
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-
+    * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       min-height: 100vh;
       padding: 20px;
     }
-
-    .container {
-      max-width: 1200px;
-      margin: 0 auto;
-    }
-
+    .container { max-width: 1200px; margin: 0 auto; }
     .header {
       background: rgba(255, 255, 255, 0.95);
       border-radius: 16px;
@@ -35,17 +24,8 @@
       justify-content: space-between;
       align-items: center;
     }
-
-    .header h1 {
-      font-size: 24px;
-      color: #667eea;
-    }
-
-    .nav {
-      display: flex;
-      gap: 15px;
-    }
-
+    .header h1 { font-size: 24px; color: #667eea; }
+    .nav { display: flex; gap: 15px; }
     .nav a {
       text-decoration: none;
       color: #666;
@@ -54,12 +34,7 @@
       border-radius: 8px;
       transition: all 0.3s;
     }
-
-    .nav a:hover {
-      background: #667eea;
-      color: white;
-    }
-
+    .nav a:hover { background: #667eea; color: white; }
     .card {
       background: white;
       border-radius: 16px;
@@ -67,73 +42,44 @@
       margin-bottom: 20px;
       box-shadow: 0 8px 32px rgba(0,0,0,0.1);
     }
-
-    .card h2 {
-      font-size: 20px;
-      margin-bottom: 20px;
-      color: #333;
-    }
-
-    .stats-bar {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 15px;
-      margin-bottom: 20px;
-    }
-
-    .stat-box {
-      background: white;
+    .card h2 { font-size: 20px; margin-bottom: 20px; color: #333; }
+    .event-card {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
       border-radius: 12px;
-      padding: 20px;
-      text-align: center;
-      box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+      padding: 25px;
+      margin-bottom: 15px;
+      cursor: pointer;
+      transition: transform 0.2s;
     }
-
-    .stat-box h3 {
+    .event-card:hover { transform: translateY(-3px); }
+    .event-card h3 { font-size: 18px; margin-bottom: 10px; }
+    .event-card p { opacity: 0.9; margin-bottom: 5px; }
+    .event-card .dates { font-size: 13px; opacity: 0.8; margin-top: 10px; }
+    .btn {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
       font-size: 14px;
-      color: #666;
-      margin-bottom: 8px;
+      transition: all 0.3s;
     }
-
-    .stat-box .value {
-      font-size: 28px;
-      font-weight: bold;
-      color: #667eea;
-    }
-
-    .players-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-      gap: 15px;
-      margin-top: 20px;
-    }
-
+    .btn-primary { background: #667eea; color: white; }
+    .btn-primary:hover { background: #5568d3; transform: translateY(-2px); }
+    .btn-success { background: #10b981; color: white; }
+    .btn-success:hover { background: #059669; }
+    .btn-danger { background: #ef4444; color: white; padding: 8px 16px; font-size: 12px; }
+    .btn-danger:hover { background: #dc2626; }
     .player-card {
       background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
       border-radius: 12px;
       padding: 20px;
+      margin-bottom: 10px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      transition: transform 0.2s;
     }
-
-    .player-card:hover {
-      transform: translateY(-2px);
-    }
-
-    .player-info h3 {
-      font-size: 16px;
-      margin-bottom: 8px;
-      color: #333;
-    }
-
-    .player-info p {
-      font-size: 13px;
-      color: #666;
-      margin-bottom: 4px;
-    }
-
     .team-slot {
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       color: white;
@@ -144,113 +90,58 @@
       justify-content: space-between;
       align-items: center;
     }
-
-    .team-slot .player-info h3 {
-      color: white;
-    }
-
-    .team-slot .player-info p {
-      color: rgba(255,255,255,0.9);
-    }
-
-    .btn {
-      padding: 12px 24px;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      font-weight: 600;
-      font-size: 14px;
-      transition: all 0.3s;
-    }
-
-    .btn-primary {
-      background: #667eea;
-      color: white;
-    }
-
-    .btn-primary:hover {
-      background: #5568d3;
-      transform: translateY(-2px);
-    }
-
-    .btn-success {
-      background: #10b981;
-      color: white;
-    }
-
-    .btn-success:hover {
-      background: #059669;
-    }
-
-    .btn-danger {
-      background: #ef4444;
-      color: white;
-      padding: 8px 16px;
-      font-size: 12px;
-    }
-
-    .btn-danger:hover {
-      background: #dc2626;
-    }
-
-    .search-box {
+    .team-slot .player-info h3 { color: white; }
+    .team-slot .player-info p { color: rgba(255,255,255,0.9); }
+    .stats-bar {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 15px;
       margin-bottom: 20px;
     }
-
+    .stat-box {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+    }
+    .stat-box h3 { font-size: 14px; color: #666; margin-bottom: 8px; }
+    .stat-box .value { font-size: 28px; font-weight: bold; color: #667eea; }
+    .search-box { margin-bottom: 20px; }
     .search-box input {
       width: 100%;
       padding: 12px 20px;
       border: 2px solid #e5e7eb;
       border-radius: 8px;
       font-size: 14px;
-      transition: border-color 0.3s;
     }
-
-    .search-box input:focus {
-      outline: none;
-      border-color: #667eea;
-    }
-
-    .alert {
-      padding: 12px 20px;
-      border-radius: 8px;
-      margin-bottom: 15px;
-      font-weight: 500;
-    }
-
-    .alert-success {
-      background: #d1fae5;
-      color: #065f46;
-    }
-
-    .alert-error {
-      background: #fee2e2;
-      color: #991b1b;
-    }
-
-    #loadingScreen {
-      text-align: center;
-      padding: 100px 20px;
-      color: white;
-    }
-
+    .search-box input:focus { outline: none; border-color: #667eea; }
+    .players-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 15px; }
+    .hidden { display: none !important; }
+    #loadingScreen { text-align: center; padding: 100px 20px; color: white; }
     .spinner {
-      width: 60px;
-      height: 60px;
+      width: 60px; height: 60px;
       border: 5px solid rgba(255,255,255,0.3);
       border-top: 5px solid white;
       border-radius: 50%;
       animation: spin 1s linear infinite;
       margin: 20px auto;
     }
-
     @keyframes spin {
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
     }
-
-    .hidden {
-      display: none !important;
+    .import-section {
+      background: #f0f9ff;
+      border: 2px dashed #667eea;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    .import-section input[type="file"] {
+      margin: 10px 0;
+      padding: 10px;
     }
   </style>
 </head>
@@ -258,20 +149,54 @@
   <div class="container">
     <!-- Экран загрузки -->
     <div id="loadingScreen">
-      <div style="font-size: 28px; margin-bottom: 20px;">⏳ Загрузка...</div>
+      <div style="font-size: 28px; margin-bottom: 20px;"> Загрузка...</div>
       <div class="spinner"></div>
       <p style="font-size: 16px; opacity: 0.9;">Инициализация VK Mini App</p>
     </div>
 
-    <!-- Основной контент -->
-    <div id="mainContent" class="hidden">
+    <!-- Выбор события -->
+    <div id="eventSelection" class="hidden">
       <div class="header">
         <h1>🏆 Фэнтези Лига - Спортивный туризм</h1>
         <nav class="nav">
           <a href="/rankings.html">🏅 Рейтинги</a>
-          <a href="/events.html"> События</a>
+          <a href="/events.html">📅 События</a>
           <a href="/admin.html" id="adminLink" class="hidden">⚙️ Админ</a>
         </nav>
+      </div>
+
+      <div class="card">
+        <h2>📅 Выберите событие для регистрации</h2>
+        <div id="eventsList"></div>
+      </div>
+    </div>
+
+    <!-- Сборка команды -->
+    <div id="teamBuilder" class="hidden">
+      <div class="header">
+        <h1>🏆 Сборка команды</h1>
+        <nav class="nav">
+          <a href="#" onclick="showEventSelection()">← Назад к событиям</a>
+          <a href="/rankings.html">🏅 Рейтинги</a>
+          <a href="/admin.html" id="adminLink2" class="hidden">⚙️ Админ</a>
+        </nav>
+      </div>
+
+      <div class="card">
+        <h2 id="selectedEventName">Событие</h2>
+      </div>
+
+      <!-- Импорт спортсменов -->
+      <div class="card" id="importSection">
+        <h2>📥 Импорт спортсменов</h2>
+        <div class="import-section">
+          <p style="margin-bottom: 10px;">Загрузите список спортсменов из CSV файла</p>
+          <input type="file" id="csvFile" accept=".csv" />
+          <button class="btn btn-primary" onclick="importPlayers()">📥 Загрузить CSV</button>
+          <p style="font-size: 12px; color: #666; margin-top: 10px;">
+            Формат: full_name,birth_year,team,rank,gender
+          </p>
+        </div>
       </div>
 
       <!-- Статистика -->
@@ -294,13 +219,6 @@
         </div>
       </div>
 
-      <!-- Уведомление о регистрации -->
-      <div class="card hidden" id="registrationBlock" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white;">
-        <h2 style="color: white; margin-bottom: 10px;">✅ Команда собрана!</h2>
-        <p style="margin-bottom: 15px;">Вы набрали 8 спортсменов. Теперь команду можно зарегистрировать.</p>
-        <button class="btn" style="background: white; color: #059669; font-weight: bold; font-size: 16px;" onclick="registerTeam()">🚀 Зарегистрировать на событие</button>
-      </div>
-
       <!-- Текущий состав -->
       <div class="card">
         <h2>✅ Ваш состав</h2>
@@ -311,9 +229,9 @@
 
       <!-- Список доступных спортсменов -->
       <div class="card">
-        <h2> Доступные спортсмены</h2>
+        <h2>📋 Доступные спортсмены</h2>
         <div class="search-box">
-          <input type="text" id="searchInput" placeholder=" Поиск по имени, команде или разряду...">
+          <input type="text" id="searchInput" placeholder="🔍 Поиск по имени, команде или разряду...">
         </div>
         <div id="playersList" class="players-grid"></div>
       </div>
@@ -323,69 +241,101 @@
   <script>
     let vkUserInfo = null;
     let currentTeam = null;
+    let selectedEvent = null;
     let allPlayers = [];
     let teamPlayers = [];
     let isRegistered = false;
 
-    // Инициализация VK Mini App
+    // Инициализация
     async function initVK() {
       try {
-        console.log('🚀 Инициализация VK Mini App...');
-        
-        // Инициализируем VK Bridge
         await vkBridge.send('VKWebAppInit', {});
-        console.log('✅ VK Bridge инициализирован');
-
-        // Получаем данные пользователя (АВТОМАТИЧЕСКИ!)
         const userData = await vkBridge.send('VKWebAppGetUserInfo', {});
         vkUserInfo = userData;
-        console.log('👤 Пользователь:', userData);
 
-        // Скрываем экран загрузки
         document.getElementById('loadingScreen').classList.add('hidden');
-        document.getElementById('mainContent').classList.remove('hidden');
-
-        // Проверяем, является ли пользователь админом
-        if (userData.id === 416323498) { // Замените на ваш VK ID
-          document.getElementById('adminLink').classList.remove('hidden');
+        
+        // Проверяем админа
+        if (userData.id === 416323498) {
+          document.getElementById('adminLink')?.classList.remove('hidden');
+          document.getElementById('adminLink2')?.classList.remove('hidden');
         }
 
-        // Автоматически создаём или получаем команду
-        await getOrCreateTeam();
+        // Показываем выбор событий
+        await loadEvents();
         
       } catch (error) {
-        console.error('❌ Ошибка инициализации VK:', error);
-        document.getElementById('loadingScreen').innerHTML = `
-          <div style="background: rgba(255,255,255,0.95); padding: 30px; border-radius: 16px; max-width: 500px; margin: 0 auto;">
-            <h3 style="color: #991b1b; margin-bottom: 15px;">⚠️ Ошибка загрузки</h3>
-            <p style="color: #7f1d1d; margin-bottom: 20px;">Не удалось подключиться к VK</p>
-            <button onclick="location.reload()" class="btn btn-danger">🔄 Попробовать снова</button>
-          </div>
-        `;
+        console.error('Ошибка VK:', error);
+        alert('Ошибка инициализации: ' + error.message);
       }
+    }
+
+    // Загрузка событий
+    async function loadEvents() {
+      try {
+        const res = await fetch('/api/events/active');
+        const events = await res.json();
+
+        document.getElementById('eventSelection').classList.remove('hidden');
+        
+        const list = document.getElementById('eventsList');
+        
+        if (events.length === 0) {
+          list.innerHTML = '<p style="text-align: center; color: #666; padding: 40px;">Нет активных событий для регистрации</p>';
+          return;
+        }
+
+        list.innerHTML = events.map(event => `
+          <div class="event-card" onclick="selectEvent(${event.id}, '${event.name}')">
+            <h3>${event.name}</h3>
+            <p>${event.description || ''}</p>
+            <div class="dates">
+              📅 Регистрация: ${event.registration_start} - ${event.registration_end}<br>
+              🏁 Событие: ${event.event_start_date} - ${event.event_end_date}
+            </div>
+          </div>
+        `).join('');
+        
+      } catch (error) {
+        console.error('Ошибка загрузки событий:', error);
+        alert('Ошибка загрузки событий');
+      }
+    }
+
+    // Выбор события
+    async function selectEvent(eventId, eventName) {
+      selectedEvent = { id: eventId, name: eventName };
+      
+      document.getElementById('selectedEventName').textContent = '📅 ' + eventName;
+      document.getElementById('eventSelection').classList.add('hidden');
+      document.getElementById('teamBuilder').classList.remove('hidden');
+      
+      // Получаем или создаём команду для этого события
+      await getOrCreateTeam();
+    }
+
+    // Показать выбор событий
+    function showEventSelection() {
+      document.getElementById('teamBuilder').classList.add('hidden');
+      document.getElementById('eventSelection').classList.remove('hidden');
     }
 
     // Получить или создать команду
     async function getOrCreateTeam() {
       try {
-        // Пробуем получить существующую команду
         const res = await fetch(`/api/teams/by-vk-id?vk_id=${vkUserInfo.id}`);
         
         if (res.ok) {
           currentTeam = await res.json();
-          console.log('✅ Найдена существующая команда:', currentTeam);
         } else {
-          // Создаём новую команду
-          console.log('🆕 Создаём новую команду...');
           await createTeam();
           return;
         }
 
-        // Показываем интерфейс
         showTeamBuilder();
         
       } catch (error) {
-        console.error('Ошибка получения команды:', error);
+        console.error('Ошибка:', error);
         await createTeam();
       }
     }
@@ -406,15 +356,12 @@
 
         if (res.ok) {
           currentTeam = await res.json();
-          console.log('✅ Команда создана:', currentTeam);
           showTeamBuilder();
         } else {
           const err = await res.json();
-          console.error('Ошибка создания команды:', err);
           alert('Ошибка: ' + err.error);
         }
       } catch (error) {
-        console.error('Ошибка:', error);
         alert('Ошибка: ' + error.message);
       }
     }
@@ -423,6 +370,42 @@
       document.getElementById('teamNameDisplay').textContent = currentTeam.user_name;
       loadPlayers();
       loadTeam();
+    }
+
+    // Импорт игроков из CSV
+    async function importPlayers() {
+      const fileInput = document.getElementById('csvFile');
+      const file = fileInput.files[0];
+      
+      if (!file) {
+        alert('Выберите файл CSV');
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = async function(e) {
+        const csv = e.target.result;
+        
+        try {
+          const res = await fetch('/api/players/import', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ csv })
+          });
+
+          if (res.ok) {
+            const result = await res.json();
+            alert(`✅ Импортировано ${result.imported} спортсменов`);
+            loadPlayers();
+          } else {
+            const err = await res.json();
+            alert('Ошибка: ' + err.error);
+          }
+        } catch (error) {
+          alert('Ошибка импорта: ' + error.message);
+        }
+      };
+      reader.readAsText(file);
     }
 
     // Загрузка игроков
@@ -434,8 +417,6 @@
 
     function renderPlayers(players) {
       const list = document.getElementById('playersList');
-      
-      // Фильтруем уже добавленных игроков
       const available = players.filter(p => !teamPlayers.find(tp => tp.id === p.id));
       
       if (available.length === 0) {
@@ -506,41 +487,15 @@
           </div>
         `).join('');
       }
-
-      if (total === 8 && !isRegistered) {
-        document.getElementById('registrationBlock').classList.remove('hidden');
-      }
     }
 
     // Удаление игрока
     async function removePlayer(playerId) {
-      if (isRegistered) {
-        alert('Нельзя удалить спортсмена из зарегистрированной команды!');
-        return;
-      }
       await fetch(`/api/teams/${currentTeam.id}/players/${playerId}`, { 
         method: 'DELETE' 
       });
       await loadTeam();
       loadPlayers();
-    }
-
-    // Регистрация команды
-    async function registerTeam() {
-      if (!confirm('Вы уверены? После регистрации состав изменить будет нельзя!')) return;
-
-      const res = await fetch(`/api/teams/${currentTeam.id}/register`, { 
-        method: 'POST' 
-      });
-      
-      if (res.ok) {
-        isRegistered = true;
-        document.getElementById('registrationBlock').classList.add('hidden');
-        alert('✅ Команда зарегистрирована!');
-      } else {
-        const err = await res.json();
-        alert('Ошибка: ' + err.error);
-      }
     }
 
     // Поиск

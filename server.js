@@ -114,6 +114,40 @@ app.delete('/api/players/:id', (req, res) => {
   res.json({ success: true });
 });
 
+// Импорт игроков из CSV
+app.post('/api/players/import', (req, res) => {
+  const { csv } = req.body;
+  
+  if (!csv) {
+    return res.status(400).json({ error: 'CSV не передан' });
+  }
+
+  const lines = csv.split('\n');
+  let imported = 0;
+
+  // Пропускаем заголовок
+  for (let i = 1; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line) continue;
+
+    const [full_name, birth_year, team, rank, gender] = line.split(',');
+    
+    if (full_name && birth_year && team && rank && gender) {
+      try {
+        db.prepare(`
+          INSERT OR REPLACE INTO players (full_name, birth_year, team, rank, gender)
+          VALUES (?, ?, ?, ?, ?)
+        `).run(full_name.trim(), parseInt(birth_year), team.trim(), rank.trim(), gender.trim().toLowerCase());
+        imported++;
+      } catch (error) {
+        console.error('Ошибка импорта строки:', error);
+      }
+    }
+  }
+
+  res.json({ imported });
+});
+
 // ============ API ДЛЯ КОМАНД ============
 
 app.post('/api/teams', (req, res) => {
