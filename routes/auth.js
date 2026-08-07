@@ -5,9 +5,17 @@ const db = require('../database');
 
 const router = express.Router();
 
-// Шаг 1: Перенаправление на авторизацию ВК
+// Начать авторизацию через VK
 router.get('/vk', (req, res) => {
-  const vkAuthUrl = `https://oauth.vk.com/authorize?client_id=${process.env.VK_APP_ID}&redirect_uri=${encodeURIComponent(process.env.VK_REDIRECT_URI)}&response_type=code&scope=email`;
+  const params = new URLSearchParams({
+    client_id: process.env.VK_APP_ID,
+    redirect_uri: process.env.VK_REDIRECT_URI,
+    response_type: 'code',
+    v: '5.131'
+  });
+  
+  const vkAuthUrl = `https://oauth.vk.com/authorize?${params.toString()}`;
+  console.log('VK Auth URL:', vkAuthUrl);
   res.redirect(vkAuthUrl);
 });
 
