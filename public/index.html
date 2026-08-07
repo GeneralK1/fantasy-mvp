@@ -9,14 +9,22 @@
 </head>
 <body>
   <div class="container">
-    <div class="header">
-      <h1>🏆 Фэнтези Лига - Спортивный туризм</h1>
-      <nav>
-        <a href="/rankings.html">🏅 Рейтинги</a>
-        <a href="/events.html"> События</a>
-        <a href="/admin.html">⚙️ Админ-панель</a>
-      </nav>
+    <!-- Экран загрузки -->
+    <div id="loadingScreen" style="text-align: center; padding: 50px;">
+      <div style="font-size: 24px; margin-bottom: 20px;">⏳ Загрузка...</div>
+      <div class="spinner" style="width: 50px; height: 50px; border: 5px solid #f3f3f3; border-top: 5px solid #667eea; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto;"></div>
+      <p style="margin-top: 20px; color: #666;">Инициализация приложения</p>
     </div>
+      <!-- Основной контент (скрыт до инициализации) -->
+    <div id="mainContent" style="display: none;">
+      <div class="header">
+        <h1>🏆 Фэнтези Лига - Спортивный туризм</h1>
+        <nav>
+          <a href="/rankings.html">🏅 Рейтинги</a>
+          <a href="/events.html"> События</a>
+          <a href="/admin.html">⚙️ Админ-панель</a>
+        </nav>
+      </div>
 
     <!-- Загрузка -->
     <div id="loading" style="text-align: center; padding: 50px;">
@@ -123,37 +131,51 @@
   </div>
 
   <script>
+    let vkUserInfo = null;
     let currentTeam = null;
     let allPlayers = [];
     let teamPlayers = [];
     let isRegistered = false;
-    let vkUserInfo = null;
 
-    const rankOrder = ['МС', 'КМС', 'I', 'II', 'III'];
-    let activeFilters = { gender: 'all', team: 'all', rank: 'all', search: '' };
 
+ 
     // Инициализация VK Bridge
     async function initVK() {
       try {
+        console.log(' Инициализация VK Bridge...');
+        
+        // Подписываемся на события
+        VKBridge.subscribe((event) => {
+          console.log('📨 VK Event:', event.type, event.detail);
+        });
+
         // Отправляем событие готовности
-        if (window.VKWebApp) {
-          VKWebApp.init();
-          
-          // Получаем данные пользователя
-          const userData = await VKWebApp.callMethod("VKWebAppGetUserInfo", {});
-          vkUserInfo = userData;
-          
-          console.log('Пользователь ВК:', userData);
-          
-          // Проверяем, есть ли уже команда
-          await checkExistingTeam();
-          
-        } else {
-          showAlert('Ошибка инициализации VK', 'error');
-        }
+        await VKBridge.send('VKWebAppInit', {});
+        console.log('✅ VK Bridge инициализирован');
+
+        // Получаем данные пользователя
+        const userData = await VKBridge.send('VKWebAppGetUserInfo', {});
+        vkUserInfo = userData;
+        console.log(' Пользователь:', userData);
+
+        // Скрываем экран загрузки
+        document.getElementById('loadingScreen').style.display = 'none';
+        document.getElementById('mainContent').style.display = 'block';
+
+        // Проверяем команду
+        await checkExistingTeam();
+        
       } catch (error) {
-        console.error('Ошибка VK:', error);
-        showAlert('Ошибка авторизации: ' + error.message, 'error');
+        console.error('❌ Ошибка инициализации VK:', error);
+        
+        // Показываем ошибку
+        document.getElementById('loadingScreen').innerHTML = `
+          <div style="background: #fee2e2; padding: 20px; border-radius: 8px; border-left: 4px solid #ef4444;">
+            <h3 style="color: #991b1b; margin-bottom: 10px;">⚠️ Ошибка загрузки</h3>
+            <p style="color: #7f1d1d; margin-bottom: 15px;">Не удалось подключиться к VK</p>
+            <button onclick="location.reload()" style="background: #ef4444; color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer;">🔄 Попробовать снова</button>
+          </div>
+        `;
       }
     }
 
@@ -161,10 +183,10 @@
     async function checkExistingTeam() {
       try {
         const token = localStorage.getItem('vk_token');
+        
         if (!token) {
-          document.getElementById('loading').classList.add('hidden');
-          document.getElementById('teamSetup').classList.remove('hidden');
-          document.getElementById('userNameDisplay').textContent = `${vkUserInfo.first_name} ${vkUserInfo.last_name}`;
+          // Создаем команду автоматически
+          await createTeam();
           return;
         }
 
@@ -174,54 +196,42 @@
         });
 
         if (res.ok) {
-          const team = await res.json();
-          currentTeam = team;
-          document.getElementById('loading').classList.add('hidden');
-          document.getElementById('teamBuilder').classList.remove('hidden');
-          document.getElementById('teamNameDisplay').textContent = team.user_name;
-          await loadPlayers();
-          await loadTeam();
+          currentTeam = await res.json();
+          showTeamBuilder();
         } else {
-          // Команды нет, показываем форму создания
-          document.getElementById('loading').classList.add('hidden');
-          document.getElementById('teamSetup').classList.remove('hidden');
-          document.getElementById('userNameDisplay').textContent = `${vkUserInfo.first_name} ${vkUserInfo.last_name}`;
+          await createTeam();
         }
       } catch (error) {
         console.error('Ошибка проверки команды:', error);
-        document.getElementById('loading').classList.add('hidden');
-        document.getElementById('teamSetup').classList.remove('hidden');
+        await createTeam();
       }
     }
 
-    // Создание команды с именем из ВК
+    // Создание команды
     async function createTeam() {
-      if (!vkUserInfo) {
-        showAlert('Ошибка: данные пользователя не получены', 'error');
-        return;
-      }
+      if (!vkUserInfo) return;
 
-      const teamName = `${vkUserInfo.first_name} ${vkUserInfo.last_name}`.trim();
+      const teamName = `${vkUserInfo.first_name} ${vkUserInfo.last_name}`;
       
-      const res = await fetch('/api/teams', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('vk_token')}`
-        },
-        body: JSON.stringify({ user_name: teamName })
-      });
+      try {
+        const res = await fetch('/api/teams', {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('vk_token')}`
+          },
+          body: JSON.stringify({ user_name: teamName })
+        });
 
-      if (res.ok) {
-        currentTeam = await res.json();
-        document.getElementById('teamSetup').classList.add('hidden');
-        document.getElementById('teamBuilder').classList.remove('hidden');
-        document.getElementById('teamNameDisplay').textContent = currentTeam.user_name;
-        await loadPlayers();
-        showAlert('Команда создана!', 'success');
-      } else {
-        const err = await res.json();
-        showAlert(err.error, 'error');
+        if (res.ok) {
+          currentTeam = await res.json();
+          showTeamBuilder();
+        } else {
+          const err = await res.json();
+          alert('Ошибка создания команды: ' + err.error);
+        }
+      } catch (error) {
+        console.error('Ошибка создания команды:', error);
       }
     }
 
