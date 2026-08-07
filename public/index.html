@@ -139,45 +139,51 @@
 
 
  
-    // Инициализация VK Bridge
-    async function initVK() {
-      try {
-        console.log(' Инициализация VK Bridge...');
-        
-        // Подписываемся на события
-        VKBridge.subscribe((event) => {
-          console.log('📨 VK Event:', event.type, event.detail);
-        });
+async function initVK() {
+  try {
+    console.log('🔄 Инициализация...');
+    
+    // Проверяем, запущено ли приложение внутри VK
+    const isVK = window.location.search.includes('vk_platform=desktop') || 
+                 window.location.search.includes('vk_platform=mobile_android') ||
+                 window.location.search.includes('vk_platform=mobile_iphone') ||
+                 window.VKWebApp;
 
-        // Отправляем событие готовности
-        await VKBridge.send('VKWebAppInit', {});
-        console.log('✅ VK Bridge инициализирован');
-
-        // Получаем данные пользователя
-        const userData = await VKBridge.send('VKWebAppGetUserInfo', {});
-        vkUserInfo = userData;
-        console.log(' Пользователь:', userData);
-
-        // Скрываем экран загрузки
-        document.getElementById('loadingScreen').style.display = 'none';
-        document.getElementById('mainContent').style.display = 'block';
-
-        // Проверяем команду
-        await checkExistingTeam();
-        
-      } catch (error) {
-        console.error('❌ Ошибка инициализации VK:', error);
-        
-        // Показываем ошибку
-        document.getElementById('loadingScreen').innerHTML = `
-          <div style="background: #fee2e2; padding: 20px; border-radius: 8px; border-left: 4px solid #ef4444;">
-            <h3 style="color: #991b1b; margin-bottom: 10px;">⚠️ Ошибка загрузки</h3>
-            <p style="color: #7f1d1d; margin-bottom: 15px;">Не удалось подключиться к VK</p>
-            <button onclick="location.reload()" style="background: #ef4444; color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer;">🔄 Попробовать снова</button>
-          </div>
-        `;
-      }
+    if (isVK && window.VKWebApp) {
+      console.log(' Запуск внутри VK');
+      await VKWebApp.send('VKWebAppInit', {});
+      
+      const userData = await VKWebApp.send('VKWebAppGetUserInfo', {});
+      vkUserInfo = userData;
+      console.log('👤 Пользователь VK:', userData);
+    } else {
+      console.log('🌐 Запуск вне VK - используем обычную авторизацию');
+      // Для тестирования вне VK - моковые данные
+      vkUserInfo = {
+        first_name: 'Тест',
+        last_name: 'Пользователь',
+        id: 1
+      };
     }
+
+    // Скрываем загрузку
+    document.getElementById('loadingScreen').style.display = 'none';
+    document.getElementById('mainContent').style.display = 'block';
+
+    // Проверяем команду
+    await checkExistingTeam();
+    
+  } catch (error) {
+    console.error('❌ Ошибка:', error);
+    document.getElementById('loadingScreen').innerHTML = `
+      <div style="background: #fee2e2; padding: 20px; border-radius: 8px;">
+        <h3 style="color: #991b1b;">⚠️ Ошибка загрузки</h3>
+        <p>${error.message}</p>
+        <button onclick="location.reload()">🔄 Повторить</button>
+      </div>
+    `;
+  }
+}
 
     // Проверка существующей команды
     async function checkExistingTeam() {

@@ -1,12 +1,15 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const db = require('./database');
-const csvParser = require('csv-parser');
-const { Readable } = require('stream');
+const { authenticateUser, requireAdmin } = require('./middleware/auth');
+const authRoutes = require('./routes/auth');
 
 const app = express();
 const PORT = 3000;
+
+// ✅ ВАЖНО: Доверие прокси (добавьте эту строку)
 app.set('trust proxy', 1);
 
 // Middleware
@@ -19,6 +22,7 @@ app.use((req, res, next) => {
 });
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
+
 app.use('/auth', authRoutes);
 app.use(cors({
   origin: process.env.NODE_ENV === 'production' 
