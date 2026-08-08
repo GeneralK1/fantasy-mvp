@@ -88,7 +88,7 @@ app.get('/api/players', (req, res) => {
   res.json(players);
 });
 
-app.post('/api/players', requireAdmin, (req, res) => {
+app.post('/api/players', (req, res) => {
   const { full_name, birth_year, team, rank, gender } = req.body;
   
   // Валидация
