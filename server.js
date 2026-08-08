@@ -116,6 +116,7 @@ app.delete('/api/players/:id', (req, res) => {
 
 
 // Импорт спортсменов из CSV
+// Импорт спортсменов из CSV
 app.post('/api/players/import', (req, res) => {
   try {
     const { csv } = req.body;
@@ -140,13 +141,13 @@ app.post('/api/players/import', (req, res) => {
       const line = lines[i].trim();
       if (!line) continue;
 
-      // Разделяем по запятой, учитывая кавычки
-      const parts = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(p => p.trim().replace(/^"|"$/g, ''));
+      // Пробуем разделить по точке с запятой ИЛИ по запятой
+      const parts = line.split(/;|,/).map(p => p.trim().replace(/^"|"$/g, ''));
       
       console.log(`Строка ${i}:`, parts);
       
       if (parts.length < 4) {
-        console.log(`Пропущена строка ${i}: недостаточно колонок`);
+        console.log(`Пропущена строка ${i}: недостаточно колонок (${parts.length})`);
         errors++;
         continue;
       }
@@ -169,14 +170,14 @@ app.post('/api/players/import', (req, res) => {
           VALUES (?, ?, ?, ?, ?)
         `).run(full_name, birth_year, team, rank, gender);
         imported++;
-        console.log(`Импортирован: ${full_name}`);
+        console.log(`✅ Импортирован: ${full_name} (${birth_year})`);
       } catch (error) {
-        console.error(`Ошибка импорта строки ${i}:`, error.message);
+        console.error(` Ошибка импорта строки ${i}:`, error.message);
         errors++;
       }
     }
 
-    console.log(`Импорт завершён: ${imported} успешно, ${errors} ошибок`);
+    console.log(`\n Импорт завершён: ${imported} успешно, ${errors} ошибок`);
     res.json({ imported, errors });
   } catch (error) {
     console.error('Ошибка импорта:', error);
