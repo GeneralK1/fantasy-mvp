@@ -473,10 +473,32 @@ app.get('/api/events/:eventId/teams', (req, res) => {
     res.status(500).json({ error: 'Ошибка: ' + error.message });
   }
 });
-
+// Получить все события
 app.get('/api/events', (req, res) => {
-  const events = db.prepare('SELECT * FROM events ORDER BY event_start_date DESC').all();
-  res.json(events);
+  try {
+    const events = db.prepare('SELECT * FROM events ORDER BY event_start_date ASC').all();
+    res.json(events);
+  } catch (error) {
+    console.error('Ошибка загрузки всех событий:', error);
+    res.status(500).json({ error: 'Ошибка: ' + error.message });
+  }
+});
+
+// Получить активные события
+app.get('/api/events/active', (req, res) => {
+  try {
+    const events = db.prepare(`
+      SELECT * FROM events 
+      WHERE status = 'active' 
+      ORDER BY event_start_date ASC
+    `).all();
+    
+    console.log(' Найдено активных событий:', events.length);
+    res.json(events);
+  } catch (error) {
+    console.error('❌ Ошибка загрузки активных событий:', error);
+    res.status(500).json({ error: 'Ошибка: ' + error.message });
+  }
 });
 
 app.get('/api/events/current', (req, res) => {
@@ -1010,6 +1032,23 @@ app.get('/api/events/active-completed', (req, res) => {
   ).all();
   res.json(events);
 });
+// Получить активные события
+app.get('/api/events/active', (req, res) => {
+  try {
+    const events = db.prepare(`
+      SELECT * FROM events 
+      WHERE status = 'active' 
+      ORDER BY event_start_date ASC
+    `).all();
+    
+    console.log('📦 Найдено активных событий:', events.length);
+    res.json(events);
+  } catch (error) {
+    console.error('❌ Ошибка загрузки активных событий:', error);
+    res.status(500).json({ error: 'Ошибка: ' + error.message });
+  }
+});
+
 
 app.listen(PORT, () => {
   console.log('✅ Сервер запущен: http://localhost:' + PORT);
