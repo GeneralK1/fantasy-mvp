@@ -3,355 +3,158 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>События и рейтинги - Фэнтези Лига</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <title>События - Фэнтези Лига</title>
+  <script src="https://unpkg.com/@vkontakte/vk-bridge/dist/browser.min.js"></script>
   <link rel="stylesheet" href="style.css">
-  <script>
-
-// Проверка авторизации при загрузке
-// Инициализация VK Mini App через VK Bridge
-window.addEventListener('DOMContentLoaded', async () => {
-  try {
-    console.log('🚀 Инициализация VK Bridge...');
-    
-    // Инициализируем VK Bridge
-    await vkBridge.send('VKWebAppInit', {});
-    console.log('✅ VK Bridge инициализирован');
-    
-    // Получаем данные пользователя
-    const userData = await vkBridge.send('VKWebAppGetUserInfo', {});
-    console.log(' Пользователь:', userData);
-    
-    // Сохраняем данные для использования
-    window.vkUserInfo = userData;
-    window.vk_id = userData.id;
-    
-    // Проверяем/регистрируем пользователя на сервере
-    const res = await fetch('/auth/register', {
-      method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json',
-        'x-vk-user-id': userData.id
-      },
-      body: JSON.stringify({
-        vk_id: userData.id,
-        first_name: userData.first_name,
-        last_name: userData.last_name,
-        photo: userData.photo_100
-      })
-    });
-    
-    if (!res.ok) {
-      console.warn('⚠️ Не удалось зарегистрировать пользователя');
-    }
-    
-    console.log('✅ Инициализация завершена');
-    
-    // Загружаем данные страницы
-    if (typeof loadEvents === 'function') {
-      await loadEvents(userData.id);
-    }
-    
-  } catch (error) {
-    console.error('❌ Ошибка инициализации VK:', error);
-    document.body.innerHTML = `
-      <div style="text-align: center; padding: 50px; font-family: Arial, sans-serif;">
-        <div style="background: #fee2e2; padding: 30px; border-radius: 12px; max-width: 500px; margin: 0 auto;">
-          <h2 style="color: #991b1b; margin-bottom: 15px;">⚠️ Ошибка загрузки</h2>
-          <p style="color: #7f1d1d; margin-bottom: 20px;">Не удалось подключиться к VK</p>
-          <button onclick="location.reload()" style="background: #ef4444; color: white; padding: 12px 24px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600;">🔄 Попробовать снова</button>
-        </div>
-      </div>
-    `;
-  }
-});
-
-// Функция для API запросов с токеном
-async function apiRequest(url, options = {}) {
-  const token = localStorage.getItem('vk_token');
-  const headers = {
-    'Content-Type': 'application/json',
-    ...options.headers
-  };
-  
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
-  
-  const res = await fetch(url, { ...options, headers });
-  return res;
-}
-</script>
 </head>
 <body>
   <div class="container">
-    <div class="header">
-      <h1>🏆 События и рейтинги</h1>
-      <nav>
-        <a href="/">👥 Сборка команды</a>
-        <a href="/rankings.html">🏅 Рейтинги</a>
-        <a href="/admin.html">⚙️ Админ-панель</a>
-      </nav>
+    <!-- Экран загрузки -->
+    <div id="loadingScreen">
+      <div style="font-size: 28px; margin-bottom: 20px;">⏳ Загрузка...</div>
+      <div class="spinner"></div>
+      <p style="font-size: 16px; opacity: 0.9;">Подключение к VK</p>
     </div>
 
-    <!-- Активное событие -->
-    <div class="card" id="currentEventSection">
-      <h2>🔥 Текущее событие</h2>
-      <div id="currentEventContent">
-        <p style="color: var(--text-muted);">Загрузка...</p>
+    <!-- Основной контент -->
+    <div id="mainContent" class="hidden">
+      <div class="header">
+        <div>
+          <h1> События</h1>
+          <p class="subtitle">Спортивный туризм</p>
+        </div>
+        <nav class="nav">
+          <a href="/"> Главная</a>
+          <a href="/rankings.html">🏅 Рейтинги</a>
+          <a href="/admin.html" id="adminLink" class="hidden">⚙️ Админ</a>
+        </nav>
       </div>
-    </div>
 
-    <!-- Все события -->
-    <div class="card">
-      <h2>📅 Все события</h2>
-      <div id="eventsList"></div>
-    </div>
+      <!-- Активные события -->
+      <div class="card">
+        <h2>🔥 Активные события</h2>
+        <div id="activeEvents"></div>
+      </div>
 
-    <!-- Рейтинг за текущее событие -->
-    <div class="card">
-      <h2>🏅 Рейтинг за текущее событие</h2>
-      <div id="currentRankings"></div>
-    </div>
-
-    <!-- Рейтинг за все время -->
-    <div class="card">
-      <h2>👑 Рейтинг за всё время</h2>
-      <div id="allTimeRankings"></div>
-    </div>
-
-    <!-- Рейтинг спортсменов -->
-    <div class="card">
-      <h2>⭐ Рейтинг спортсменов</h2>
-      <div id="playerRankings"></div>
+      <!-- Все события -->
+      <div class="card">
+        <h2>📋 Все события</h2>
+        <div id="allEvents"></div>
+      </div>
     </div>
   </div>
 
   <script>
-    // Загрузка данных
-    async function loadData() {
-      await Promise.all([
-        loadCurrentEvent(),
-        loadEvents(),
-        loadCurrentRankings(),
-        loadAllTimeRankings(),
-        loadPlayerRankings()
-      ]);
-    }
+    let vkUserInfo = null;
+    let vk_id = null;
 
-    // Текущее событие
-    async function loadCurrentEvent() {
+    // Инициализация
+    async function init() {
       try {
-        const res = await fetch('/api/events/current');
-        const event = await res.json();
-
-        const container = document.getElementById('currentEventContent');
-
-        if (!event) {
-          container.innerHTML = '<p style="color: var(--text-muted); text-align: center; padding: 40px;">Нет активного события</p>';
-          return;
+        console.log('🚀 Инициализация...');
+        
+        // Пробуем инициализировать VK Bridge
+        try {
+          await vkBridge.send('VKWebAppInit', {});
+          console.log('✅ VK Bridge инициализирован');
+          
+          // Получаем данные пользователя
+          const userData = await vkBridge.send('VKWebAppGetUserInfo', {});
+          vkUserInfo = userData;
+          vk_id = userData.id;
+          console.log('👤 Пользователь:', userData);
+        } catch (vkError) {
+          console.warn('⚠️ VK Bridge недоступен, используем тестовый режим');
+          // Тестовый режим - для отладки вне VK
+          vk_id = 416323498; // Замените на ваш VK ID
+          vkUserInfo = { id: vk_id, first_name: 'Тест', last_name: 'Пользователь' };
         }
 
-        container.innerHTML = `
-          <div style="background: linear-gradient(135deg, rgba(139,92,246,0.15), rgba(59,130,246,0.1)); border: 1px solid rgba(139,92,246,0.2); color: var(--text-primary); padding: 24px; border-radius: 12px;">
-            <h3 style="font-size: 24px; margin-bottom: 12px; font-weight: 700;">${event.name}</h3>
-            ${event.description ? `<p style="margin-bottom: 12px; color: var(--text-secondary);">${event.description}</p>` : ''}
-            <p style="font-size: 14px; color: var(--text-muted); margin-bottom: 6px;">
-              📅 Даты события: ${formatDate(event.event_start_date)} — ${formatDate(event.event_end_date)}
-            </p>
-            <p style="font-size: 14px; color: var(--text-muted);">
-              📝 Регистрация: ${formatDate(event.registration_start)} — ${formatDate(event.registration_end)}
-            </p>
-            <p style="margin-top: 12px; font-size: 13px; background: rgba(139,92,246,0.1); padding: 8px 14px; border-radius: 8px; display: inline-block; color: var(--accent-purple); font-weight: 600;">
-              Статус: ${event.status === 'active' ? '🔥 Активно' : event.status === 'completed' ? '✅ Завершено' : '⏳ Предстоит'}
-            </p>
+        // Скрываем загрузку
+        document.getElementById('loadingScreen').classList.add('hidden');
+        document.getElementById('mainContent').classList.remove('hidden');
+
+        // Проверяем админа
+        if (vk_id === 416323498) {
+          document.getElementById('adminLink').classList.remove('hidden');
+        }
+
+        // Загружаем события
+        await loadEvents();
+        
+      } catch (error) {
+        console.error('❌ Ошибка инициализации:', error);
+        document.getElementById('loadingScreen').innerHTML = `
+          <div class="card" style="max-width: 500px; margin: 0 auto; text-align: center;">
+            <h2 style="color: var(--danger-dark); margin-bottom: 15px;">⚠️ Ошибка загрузки</h2>
+            <p style="color: var(--danger-dark); margin-bottom: 20px;">${error.message}</p>
+            <button onclick="location.reload()" class="btn btn-danger">🔄 Попробовать снова</button>
           </div>
         `;
-      } catch (error) {
-        console.error('Ошибка загрузки события:', error);
       }
     }
 
-    // Все события
+    // Загрузка событий
     async function loadEvents() {
       try {
-        const res = await fetch('/api/events');
-        const events = await res.json();
+        // Загружаем активные события
+        const activeRes = await fetch('/api/events/active');
+        const activeEvents = await activeRes.json();
+        
+        // Загружаем все события
+        const allRes = await fetch('/api/events');
+        const allEvents = await allRes.json();
 
-        const container = document.getElementById('eventsList');
+        console.log('Активные события:', activeEvents);
+        console.log('Все события:', allEvents);
 
-        if (events.length === 0) {
-          container.innerHTML = '<p style="color: var(--text-muted); text-align: center; padding: 40px;">Нет событий</p>';
-          return;
+        // Отображаем активные
+        const activeDiv = document.getElementById('activeEvents');
+        if (activeEvents.length === 0) {
+          activeDiv.innerHTML = '<p style="color: var(--text-muted); text-align: center; padding: 20px;">Нет активных событий</p>';
+        } else {
+          activeDiv.innerHTML = activeEvents.map(event => `
+            <div class="event-card">
+              <h3>${event.name}</h3>
+              <p>${event.description || ''}</p>
+              <div class="dates">
+                📅 Регистрация: ${event.registration_start} - ${event.registration_end}<br>
+                 Событие: ${event.event_start_date} - ${event.event_end_date}
+              </div>
+            </div>
+          `).join('');
         }
 
-        container.innerHTML = events.map(e => `
-          <div class="event-card ${e.status}">
-            <div style="flex: 1;">
-              <h3 style="font-size: 17px; font-weight: 700; margin-bottom: 6px;">${e.name}</h3>
-              <p style="color: var(--text-muted); font-size: 14px;">${e.description || ''}</p>
-              <p style="font-size: 13px; color: var(--accent-purple); margin-top: 8px;">
-                📅 Событие: ${formatDate(e.event_start_date)} — ${formatDate(e.event_end_date)}
-              </p>
-              <p style="font-size: 13px; color: var(--accent-green); margin-top: 4px;">
-                📝 Регистрация: ${formatDate(e.registration_start)} — ${formatDate(e.registration_end)}
-              </p>
+        // Отображаем все события
+        const allDiv = document.getElementById('allEvents');
+        if (allEvents.length === 0) {
+          allDiv.innerHTML = '<p style="color: var(--text-muted); text-align: center; padding: 20px;">Нет событий</p>';
+        } else {
+          allDiv.innerHTML = allEvents.map(event => `
+            <div class="event-card" style="background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); color: var(--text-primary);">
+              <h3 style="color: var(--text-primary);">${event.name}</h3>
+              <p style="color: var(--text-secondary);">${event.description || ''}</p>
+              <div class="dates" style="color: var(--text-secondary);">
+                📅 Регистрация: ${event.registration_start} - ${event.registration_end}<br>
+                 Событие: ${event.event_start_date} - ${event.event_end_date}<br>
+                <span class="badge badge-${event.status === 'active' ? 'success' : 'info'}">${event.status}</span>
+              </div>
             </div>
-            <div class="event-status status-${e.status}">
-              ${e.status === 'active' ? '🔥 Активно' : e.status === 'completed' ? '✅ Завершено' : '⏳ Предстоит'}
-            </div>
-          </div>
-        `).join('');
+          `).join('');
+        }
+
       } catch (error) {
         console.error('Ошибка загрузки событий:', error);
-      }
-    }
-
-    // Рейтинг за текущее событие
-    async function loadCurrentRankings() {
-      try {
-        const res = await fetch('/api/rankings/current');
-        const data = await res.json();
-
-        const container = document.getElementById('currentRankings');
-
-        if (!data.event || data.rankings.length === 0) {
-          container.innerHTML = '<p style="color: var(--text-muted); text-align: center; padding: 40px;">Пока нет зарегистрированных команд</p>';
-          return;
-        }
-
-        container.innerHTML = `
-          <table class="ranking-table">
-            <thead>
-              <tr>
-                <th>Место</th>
-                <th>Команда</th>
-                <th>Очки</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${data.rankings.map((r, i) => `
-                <tr class="${i < 3 ? 'top-three' : ''}">
-                  <td>${getMedal(i + 1)}</td>
-                  <td>${r.user_name}</td>
-                  <td><strong>${r.total_points}</strong></td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
+        document.getElementById('activeEvents').innerHTML = `
+          <div class="alert alert-error">
+             Ошибка загрузки событий: ${error.message}
+          </div>
         `;
-      } catch (error) {
-        console.error('Ошибка загрузки рейтинга:', error);
       }
     }
 
-    // Рейтинг за всё время
-async function loadAllTimeRankings() {
-  try {
-    const res = await fetch('/api/rankings/all-time');
-    const rankings = await res.json();
-    
-    const container = document.getElementById('allTimeRankings');
-    
-    if (rankings.length === 0) {
-      container.innerHTML = '<p style="color: #999; text-align: center; padding: 20px;">Пока нет данных</p>';
-      return;
-    }
-
-    container.innerHTML = `
-      <table class="ranking-table">
-        <thead>
-          <tr>
-            <th>Место</th>
-            <th>Команда</th>
-            <th>Очки</th>
-            <th>Событий</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${rankings.map((r, i) => `
-            <tr class="${i < 3 ? 'top-three' : ''}">
-              <td>${getMedal(i + 1)}</td>
-              <td>
-                ${r.photo ? `<img src="${r.photo}" style="width: 30px; height: 30px; border-radius: 50%; margin-right: 10px; vertical-align: middle;">` : ''}
-                ${r.first_name || r.user_name} ${r.last_name || ''}
-              </td>
-              <td><strong>${r.total_points}</strong></td>
-              <td>${r.events_count}</td>
-            </tr>
-          `).join('')}
-        </tbody>
-      </table>
-    `;
-  } catch (error) {
-    console.error('Ошибка загрузки рейтинга:', error);
-  }
-}
-
-    // Рейтинг спортсменов
-    async function loadPlayerRankings() {
-      try {
-        const res = await fetch('/api/rankings/players');
-        const rankings = await res.json();
-
-        const container = document.getElementById('playerRankings');
-
-        if (rankings.length === 0) {
-          container.innerHTML = '<p style="color: var(--text-muted); text-align: center; padding: 40px;">Пока нет данных</p>';
-          return;
-        }
-
-        container.innerHTML = `
-          <table class="ranking-table">
-            <thead>
-              <tr>
-                <th>Место</th>
-                <th>Спортсмен</th>
-                <th>Команда</th>
-                <th>Разряд</th>
-                <th>Очки</th>
-                <th>Событий</th>
-                <th>Среднее</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${rankings.map((r, i) => `
-                <tr class="${i < 3 ? 'top-three' : ''}">
-                  <td>${getMedal(i + 1)}</td>
-                  <td>${r.full_name} ${r.gender === 'male' ? '♂' : '♀'}</td>
-                  <td>${r.team}</td>
-                  <td>${r.rank}</td>
-                  <td><strong>${r.total_points}</strong></td>
-                  <td>${r.events_count}</td>
-                  <td>${r.avg_points.toFixed(1)}</td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-        `;
-      } catch (error) {
-        console.error('Ошибка загрузки рейтинга спортсменов:', error);
-      }
-    }
-
-    // Форматирование даты
-    function formatDate(dateStr) {
-      const date = new Date(dateStr);
-      return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
-    }
-
-    // Медали
-    function getMedal(place) {
-      if (place === 1) return '🥇';
-      if (place === 2) return '🥈';
-      if (place === 3) return '🥉';
-      return place;
-    }
-
-    // Загрузка при старте
-    loadData();
+    // Запуск
+    document.addEventListener('DOMContentLoaded', init);
   </script>
 </body>
 </html>
