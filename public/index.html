@@ -211,36 +211,111 @@ function formatDate(dateString) {
     }
 
     // Загрузка событий
-    async function loadEvents() {
-      try {
-        const res = await fetch('/api/events/active');
-        const events = await res.json();
-
-        document.getElementById('eventSelection').classList.remove('hidden');
-        
-        const list = document.getElementById('eventsList');
-        
-        if (events.length === 0) {
-          list.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 40px;">Нет активных событий для регистрации</p>';
-          return;
-        }
-
-        list.innerHTML = events.map(event => `
-          <div class="event-card" onclick="selectEvent(${event.id}, '${event.name.replace(/'/g, "\\'")}')">
-            <h3>${event.name}</h3>
-            <p>${event.description || ''}</p>
-            <div class="dates">
-              📅 Регистрация: ${event.registration_start} - ${event.registration_end}<br>
-              🏁 Событие: ${event.event_start_date} - ${event.event_end_date}
-            </div>
-          </div>
-        `).join('');
-        
-      } catch (error) {
-        console.error('Ошибка загрузки событий:', error);
-        alert('Ошибка загрузки событий');
-      }
+// Загрузка событий
+// Загрузка событий
+async function loadEvents() {
+  try {
+    console.log('🔄 Загрузка событий...');
+    
+    const res = await fetch('/api/events/active');
+    
+    if (!res.ok) {
+      console.error('HTTP ошибка:', res.status);
+      throw new Error(`HTTP ${res.status}`);
     }
+    
+    const events = await res.json();
+    console.log('📦 Получено событий:', events);
+
+    document.getElementById('eventSelection').classList.remove('hidden');
+    
+    const list = document.getElementById('eventsList');
+    
+    // Обработка пустого списка событий
+    if (!events || events.length === 0) {
+      list.innerHTML = `
+        <div class="card" style="text-align: center; padding: 60px 20px;">
+          <div style="font-size: 64px; margin-bottom: 20px;">📭</div>
+          <h3 style="color: var(--text-primary); margin-bottom: 10px;">Нет активных событий</h3>
+          <p style="color: var(--text-secondary); margin-bottom: 20px;">
+            В настоящее время нет открытых событий для регистрации.<br>
+            Пожалуйста, зайдите позже или свяжитесь с администратором.
+          </p>
+          ${vkUserInfo && vkUserInfo.id === 416323498 ? `
+            <div style="margin-top: 20px; padding-top: 20px; border-top: 2px dashed var(--border);">
+              <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 15px;">
+                🔑 Вы администратор
+              </p>
+              <a href="/admin.html" class="btn btn-primary">
+                ️ Перейти в админ-панель
+              </a>
+            </div>
+          ` : ''}
+        </div>
+      `;
+      return;
+    }
+
+    list.innerHTML = events.map(event => `
+      <div class="event-card" onclick="selectEvent(${event.id}, '${event.name.replace(/'/g, "\\'")}')">
+        <h3>${event.name}</h3>
+        <p>${event.description || ''}</p>
+        <div class="dates">
+          📅 Регистрация: ${formatDate(event.registration_start)} — ${formatDate(event.registration_end)}<br>
+          🏁 Событие: ${formatDate(event.event_start_date)} — ${formatDate(event.event_end_date)}
+        </div>
+      </div>
+    `).join('');
+    
+  } catch (error) {
+    console.error(' Ошибка загрузки событий:', error);
+    document.getElementById('eventSelection').classList.remove('hidden');
+    document.getElementById('eventsList').innerHTML = `
+      <div class="card" style="text-align: center; padding: 40px;">
+        <div style="font-size: 48px; margin-bottom: 15px;">⚠️</div>
+        <h3 style="color: var(--text-primary); margin-bottom: 10px;">Не удалось загрузить события</h3>
+        <p style="color: var(--text-secondary); margin-bottom: 20px;">
+          ${error.message}
+        </p>
+        <button onclick="location.reload()" class="btn btn-primary">
+          🔄 Попробовать снова
+        </button>
+      </div>
+    `;
+  }
+}
+
+// Функция форматирования даты
+function formatDate(dateString) {
+  if (!dateString) return 'Не указана';
+  try {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return 'Не указана';
+    return date.toLocaleDateString('ru-RU', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+  } catch (e) {
+    return 'Не указана';
+  }
+}
+
+// Функция форматирования даты
+function formatDate(dateString) {
+  if (!dateString) return 'Не указана';
+  try {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return 'Не указана';
+    return date.toLocaleDateString('ru-RU', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+  } catch (e) {
+    return 'Не указана';
+  }
+}
 
 function showEventSelection() {
   // Сбрасываем состояние
