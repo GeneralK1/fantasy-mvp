@@ -227,7 +227,26 @@
       }
     }
 
-// Выбор события
+function showEventSelection() {
+  // Сбрасываем состояние
+  currentTeam = null;
+  teamPlayers = [];
+  isConfirmed = false;
+  selectedEvent = null;
+  
+  // Скрываем сборку команды
+  document.getElementById('teamBuilder').classList.add('hidden');
+  
+  // Показываем выбор событий
+  document.getElementById('eventSelection').classList.remove('hidden');
+  
+  // Скрываем уведомления
+  document.getElementById('confirmedNotice').classList.add('hidden');
+  document.getElementById('confirmBlock').classList.add('hidden');
+  
+  console.log(' Возврат к выбору событий');
+}
+    // Выбор события
 async function selectEvent(eventId, eventName) {
   selectedEvent = { id: eventId, name: eventName };
   
