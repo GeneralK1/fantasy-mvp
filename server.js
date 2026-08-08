@@ -3,8 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const db = require('./database');
-const { authenticateUser, requireAdmin } = require('./middleware/auth');
-const authRoutes = require('./routes/auth');
+
 
 const app = express();
 const PORT = 3000;
