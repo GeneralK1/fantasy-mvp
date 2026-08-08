@@ -318,35 +318,43 @@
       });
     }
 
-    // Применить фильтры
-    function applyFilters() {
-      const genderFilter = document.getElementById('genderFilter').value;
-      const rankFilter = document.getElementById('rankFilter').value;
-      const regionFilter = document.getElementById('regionFilter').value;
-      const searchInput = document.getElementById('searchInput').value.toLowerCase();
+// Применить фильтры
+function applyFilters() {
+  const genderFilter = document.getElementById('genderFilter').value;
+  const rankFilter = document.getElementById('rankFilter').value;
+  const regionFilter = document.getElementById('regionFilter').value;
+  const searchInput = document.getElementById('searchInput').value.toLowerCase();
 
-      let filtered = allPlayers.filter(p => {
-        // Исключаем уже добавленных в команду
-        if (teamPlayers.find(tp => tp.id === p.id)) return false;
-        
-        // Фильтр по полу
-        if (genderFilter && p.gender !== genderFilter) return false;
-        
-        // Фильтр по разряду
-        if (rankFilter && p.rank !== rankFilter) return false;
-        
-        // Фильтр по региону
-        if (regionFilter && p.team !== regionFilter) return false;
-        
-        // Поиск
-        if (searchInput && !p.full_name.toLowerCase().includes(searchInput) && 
-            !p.team.toLowerCase().includes(searchInput)) return false;
-        
-        return true;
-      });
+  // Считаем сколько уже добавлено
+  const malesInTeam = teamPlayers.filter(p => p.gender === 'male').length;
+  const femalesInTeam = teamPlayers.filter(p => p.gender === 'female').length;
 
-      renderPlayers(filtered);
-    }
+  let filtered = allPlayers.filter(p => {
+    // Исключаем уже добавленных в команду
+    if (teamPlayers.find(tp => tp.id === p.id)) return false;
+    
+    // Фильтр по полу
+    if (genderFilter && p.gender !== genderFilter) return false;
+    
+    // Фильтр по разряду
+    if (rankFilter && p.rank !== rankFilter) return false;
+    
+    // Фильтр по региону
+    if (regionFilter && p.team !== regionFilter) return false;
+    
+    // Поиск
+    if (searchInput && !p.full_name.toLowerCase().includes(searchInput) && 
+        !p.team.toLowerCase().includes(searchInput)) return false;
+    
+    // ПРОВЕРКА ЛИМИТА ПО ПОЛУ (исправляем баг!)
+    if (p.gender === 'male' && malesInTeam >= 4) return false;
+    if (p.gender === 'female' && femalesInTeam >= 4) return false;
+    
+    return true;
+  });
+
+  renderPlayers(filtered);
+}
 
     function renderPlayers(players) {
       const list = document.getElementById('playersList');
@@ -440,32 +448,73 @@
       }
     }
 
-    // Подтверждение команды
-    async function confirmTeam() {
-      if (!confirm('️ Вы уверены? После подтверждения изменить состав команды будет НЕЛЬЗЯ!')) {
-        return;
-      }
+// Показ модального окна
+function confirmTeam() {
+  document.getElementById('confirmModal').classList.remove('hidden');
+}
 
-      try {
-        const res = await fetch(`/api/teams/${currentTeam.id}/confirm`, {
-          method: 'POST'
-        });
+// Закрытие модального окна
+function closeConfirmModal() {
+  document.getElementById('confirmModal').classList.add('hidden');
+}
 
-        if (res.ok) {
-          isConfirmed = true;
-          document.getElementById('confirmBlock').classList.add('hidden');
-          document.getElementById('confirmedNotice').classList.remove('hidden');
-          alert('✅ Команда подтверждена! Состав зафиксирован.');
-          loadTeam();
-          applyFilters();
-        } else {
-          const err = await res.json();
-          alert('Ошибка: ' + err.error);
-        }
-      } catch (error) {
-        alert('Ошибка: ' + error.message);
-      }
+// Выполнение подтверждения
+async function executeConfirmTeam() {
+  try {
+    const res = await fetch(`/api/teams/${currentTeam.id}/confirm`, {
+      method: 'POST'
+    });
+
+    if (res.ok) {
+      isConfirmed = true;
+      closeConfirmModal();
+      document.getElementById('confirmBlock').classList.add('hidden');
+      document.getElementById('confirmedNotice').classList.remove('hidden');
+      
+      // Показываем красивое уведомление
+      showSuccessNotification('Команда подтверждена! Состав зафиксирован.');
+      
+      loadTeam();
+      applyFilters();
+    } else {
+      const err = await res.json();
+      alert('Ошибка: ' + err.error);
     }
+  } catch (error) {
+    alert('Ошибка: ' + error.message);
+  }
+}
+
+// Красивое уведомление
+function showSuccessNotification(message) {
+  const notification = document.createElement('div');
+  notification.className = 'alert alert-success';
+  notification.style.cssText = `
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 9999;
+    min-width: 300px;
+    max-width: 500px;
+    animation: slideIn 0.3s ease;
+  `;
+  notification.innerHTML = `
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <span style="font-size: 24px;">✅</span>
+      <div>
+        <strong style="display: block; margin-bottom: 4px;">Успешно!</strong>
+        ${message}
+      </div>
+    </div>
+  `;
+  
+  document.body.appendChild(notification);
+  
+  setTimeout(() => {
+    notification.style.animation = 'fadeOut 0.3s ease';
+    setTimeout(() => notification.remove(), 300);
+  }, 3000);
+}
 
     // Удаление игрока
     async function removePlayer(playerId) {
@@ -484,5 +533,26 @@
     // Запуск
     document.addEventListener('DOMContentLoaded', initVK);
   </script>
+  <!-- Модальное окно подтверждения -->
+<div id="confirmModal" class="modal-overlay hidden">
+  <div class="modal" style="max-width: 500px; text-align: center;">
+    <div style="font-size: 64px; margin-bottom: 20px;">🏆</div>
+    <h2 style="margin-bottom: 15px; color: var(--text-primary);">Подтверждение команды</h2>
+    <p style="color: var(--text-secondary); margin-bottom: 20px; line-height: 1.6;">
+      Вы набрали <strong>8 спортсменов</strong> и готовы зафиксировать состав.<br><br>
+      <span style="color: var(--danger); font-weight: 600;">
+        ⚠️ После подтверждения изменить состав будет НЕЛЬЗЯ!
+      </span>
+    </p>
+    <div style="display: flex; gap: 12px; justify-content: center;">
+      <button class="btn btn-secondary" onclick="closeConfirmModal()">
+        Отмена
+      </button>
+      <button class="btn btn-success" onclick="executeConfirmTeam()" style="padding: 12px 32px;">
+        ✅ Подтвердить состав
+      </button>
+    </div>
+  </div>
+</div>
 </body>
 </html>

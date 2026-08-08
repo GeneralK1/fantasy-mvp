@@ -915,3 +915,7 @@ table tbody tr:last-child td {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--primary-dark);
 }
+@keyframes fadeOut {
+  from { opacity: 1; transform: translateX(0); }
+  to { opacity: 0; transform: translateX(100%); }
+}

@@ -186,38 +186,78 @@ app.post('/api/players/import', (req, res) => {
 
 // ============ API ДЛЯ КОМАНД ============
 
-// Создание команды
+// Создание команды (обновлённый endpoint)
 app.post('/api/teams', (req, res) => {
-  const { user_name, vk_id } = req.body;
+  const { user_name, vk_id, event_id } = req.body;
   
   if (!user_name || !vk_id) {
     return res.status(400).json({ error: 'Не указаны имя или VK ID' });
   }
   
   try {
-    // 1. Сначала создаём пользователя в vk_users (если нет)
-    const firstName = user_name.split(' ')[0] || 'User';
-    const lastName = user_name.split(' ')[1] || '';
-    
+    // Создаём пользователя если нет
     db.prepare(`
       INSERT OR IGNORE INTO vk_users (vk_id, first_name, last_name, is_admin)
       VALUES (?, ?, ?, 0)
-    `).run(vk_id, firstName, lastName);
+    `).run(vk_id, user_name.split(' ')[0], user_name.split(' ')[1] || '');
     
-    // 2. Проверяем, есть ли уже команда
-    const existingTeam = db.prepare('SELECT * FROM teams WHERE vk_id = ?').get(vk_id);
-    if (existingTeam) {
-      return res.status(400).json({ error: 'У вас уже есть команда' });
+    // Проверяем, есть ли уже команда для этого события
+    if (event_id) {
+      const existingTeam = db.prepare(
+        'SELECT * FROM teams WHERE vk_id = ? AND event_id = ?'
+      ).get(vk_id, event_id);
+      
+      if (existingTeam) {
+        return res.status(400).json({ error: 'У вас уже есть команда для этого события' });
+      }
     }
     
-    // 3. Создаём команду
-    const result = db.prepare('INSERT INTO teams (vk_id, user_name) VALUES (?, ?)').run(vk_id, user_name);
-    const team = db.prepare('SELECT * FROM teams WHERE id = ?').get(result.lastInsertRowid);
+    // Создаём команду
+    const result = db.prepare(
+      'INSERT INTO teams (vk_id, event_id, user_name) VALUES (?, ?, ?)'
+    ).run(vk_id, event_id || null, user_name);
     
+    const team = db.prepare('SELECT * FROM teams WHERE id = ?').get(result.lastInsertRowid);
     res.json(team);
   } catch (error) {
     console.error('Ошибка создания команды:', error);
     res.status(500).json({ error: 'Ошибка: ' + error.message });
+  }
+});
+
+// Получить команду по vk_id и event_id
+app.get('/api/teams/by-vk-id', (req, res) => {
+  const vk_id = req.query.vk_id;
+  const event_id = req.query.event_id;
+  
+  if (!vk_id) {
+    return res.status(400).json({ error: 'VK ID не указан' });
+  }
+  
+  try {
+    let team;
+    if (event_id) {
+      team = db.prepare(
+        'SELECT * FROM teams WHERE vk_id = ? AND event_id = ?'
+      ).get(vk_id, event_id);
+    } else {
+      team = db.prepare('SELECT * FROM teams WHERE vk_id = ?').get(vk_id);
+    }
+    
+    if (!team) {
+      return res.status(404).json({ error: 'Команда не найдена' });
+    }
+    
+    const players = db.prepare(`
+      SELECT p.* FROM players p
+      JOIN team_players tp ON p.id = tp.player_id
+      WHERE tp.team_id = ?
+    `).all(team.id);
+    
+    res.json({ ...team, players });
+  } catch (error) {
+    console.error('Ошибка:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
   }
 });
 

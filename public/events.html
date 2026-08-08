@@ -118,7 +118,7 @@
               <h3>${event.name}</h3>
               <p>${event.description || ''}</p>
               <div class="dates">
-                📅 Регистрация: ${event.registration_start} - ${event.registration_end}<br>
+                📅 Регистрация: ${event.registration_start ? new Date(event.registration_start).toLocaleDateString('ru-RU') : 'Не указана'} - ${event.registration_end ? new Date(event.registration_end).toLocaleDateString('ru-RU') : 'Не указана'}<br>
                  Событие: ${event.event_start_date} - ${event.event_end_date}
               </div>
             </div>
