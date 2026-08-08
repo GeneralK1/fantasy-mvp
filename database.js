@@ -24,9 +24,10 @@ db.exec(`
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     vk_id INTEGER NOT NULL,
     user_name TEXT NOT NULL,
+    is_confirmed INTEGER DEFAULT 0 
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (vk_id) REFERENCES vk_users(vk_id),
-    is_confirmed INTEGER DEFAULT 0 
+
   )
 `);
 db.exec(`
