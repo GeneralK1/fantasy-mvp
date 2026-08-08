@@ -18,15 +18,14 @@ db.exec(`CREATE TABLE IF NOT EXISTS vk_users (
 )`);
 
 db.exec(`CREATE TABLE IF NOT EXISTS teams (
-id INTEGER PRIMARY KEY AUTOINCREMENT,
-vk_id INTEGER NOT NULL,
-event_id INTEGER NOT NULL,
-user_name TEXT NOT NULL,
-is_confirmed INTEGER DEFAULT 0,
-created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-FOREIGN KEY (vk_id) REFERENCES vk_users(vk_id),
-FOREIGN KEY (event_id) REFERENCES events(id),
-UNIQUE(vk_id, event_id)
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  vk_id INTEGER NOT NULL,
+  event_id INTEGER,
+  user_name TEXT NOT NULL,
+  is_confirmed INTEGER DEFAULT 0,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (vk_id) REFERENCES vk_users(vk_id),
+  FOREIGN KEY (event_id) REFERENCES events(id)
 )`);
 
 db.exec(`CREATE TABLE IF NOT EXISTS players (
