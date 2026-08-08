@@ -501,9 +501,18 @@ app.delete('/api/events/:id', (req, res) => {
 });
 
 app.post('/api/events/:id/activate', (req, res) => {
-  db.prepare("UPDATE events SET status = 'upcoming' WHERE status = 'active'").run();
-  db.prepare("UPDATE events SET status = 'active' WHERE id = ?").run(req.params.id);
-  res.json({ success: true });
+  const eventId = req.params.id;
+  
+  try {
+    // Активируем ТОЛЬКО конкретное событие, не трогая остальные
+    db.prepare("UPDATE events SET status = 'active' WHERE id = ?").run(eventId);
+    
+    console.log(`✅ Событие ${eventId} активировано`);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Ошибка активации:', error);
+    res.status(500).json({ error: 'Ошибка: ' + error.message });
+  }
 });
 
 app.post('/api/events/:id/complete', (req, res) => {

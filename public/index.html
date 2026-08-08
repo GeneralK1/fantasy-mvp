@@ -69,25 +69,37 @@
         </div>
       </div>
 
-      <!-- Уведомление о подтверждении -->
-      <div id="confirmedNotice" class="hidden">
-        <div class="alert alert-success" style="text-align: center;">
-          ✅ <strong>Команда подтверждена!</strong><br>
-          Состав зафиксирован и не может быть изменён
-        </div>
-      </div>
+<!-- Уведомление о подтверждении -->
+<div id="confirmedNotice" class="hidden">
+  <div class="alert alert-success" style="text-align: center; padding: 20px; background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%); border: 2px solid #10b981;">
+    <div style="font-size: 48px; margin-bottom: 10px;">✅</div>
+    <strong style="font-size: 18px; display: block; margin-bottom: 8px; color: #065f46;">Команда подтверждена!</strong>
+    <p style="color: #047857; margin: 0; font-size: 14px;">
+      Состав зафиксирован и не может быть изменён
+    </p>
+  </div>
+</div>
 
-      <!-- Кнопка подтверждения (показывается когда 8 человек) -->
-      <div id="confirmBlock" class="hidden">
-        <div class="card" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white;">
-          <h2 style="color: white; margin-bottom: 10px;">✅ Команда собрана!</h2>
-          <p style="margin-bottom: 15px;">Вы набрали 8 спортсменов. Подтвердите состав для регистрации.</p>
-          <p style="font-size: 13px; opacity: 0.9; margin-bottom: 15px;">⚠️ После подтверждения изменить состав будет нельзя!</p>
-          <button class="btn" style="background: white; color: #059669; font-weight: bold; font-size: 16px;" onclick="confirmTeam()">
-            ✅ Подтвердить состав
-          </button>
-        </div>
+<!-- Кнопка подтверждения (показывается когда 8 человек) -->
+<div id="confirmBlock" class="hidden">
+  <div class="card" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: 3px solid rgba(255,255,255,0.3);">
+    <div style="text-align: center;">
+      <div style="font-size: 48px; margin-bottom: 15px;">🏆</div>
+      <h2 style="color: white; margin-bottom: 15px; font-size: 24px; text-shadow: 0 2px 4px rgba(0,0,0,0.2);">✅ Команда собрана!</h2>
+      <p style="margin-bottom: 15px; font-size: 16px; line-height: 1.6; color: rgba(255,255,255,0.95);">
+        Вы набрали <strong style="color: white;">8 спортсменов</strong> и готовы зафиксировать состав.
+      </p>
+      <div style="background: rgba(255,255,255,0.2); padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+        <p style="font-size: 14px; color: rgba(255,255,255,0.95); margin: 0;">
+          ⚠️ <strong>После подтверждения изменить состав будет НЕЛЬЗЯ!</strong>
+        </p>
       </div>
+      <button class="btn" style="background: white; color: #059669; font-weight: bold; font-size: 16px; padding: 14px 32px; box-shadow: 0 4px 12px rgba(0,0,0,0.2);" onclick="confirmTeam()">
+        ✅ Подтвердить состав
+      </button>
+    </div>
+  </div>
+</div>
 
       <!-- Текущий состав -->
       <div class="card">
