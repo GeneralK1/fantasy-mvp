@@ -114,38 +114,74 @@ app.delete('/api/players/:id', (req, res) => {
   res.json({ success: true });
 });
 
-// Импорт игроков из CSV
+
+// Импорт спортсменов из CSV
 app.post('/api/players/import', (req, res) => {
-  const { csv } = req.body;
-  
-  if (!csv) {
-    return res.status(400).json({ error: 'CSV не передан' });
-  }
-
-  const lines = csv.split('\n');
-  let imported = 0;
-
-  // Пропускаем заголовок
-  for (let i = 1; i < lines.length; i++) {
-    const line = lines[i].trim();
-    if (!line) continue;
-
-    const [full_name, birth_year, team, rank, gender] = line.split(',');
+  try {
+    const { csv } = req.body;
     
-    if (full_name && birth_year && team && rank && gender) {
+    if (!csv) {
+      return res.status(400).json({ error: 'CSV не передан' });
+    }
+
+    console.log('Получен CSV для импорта, длина:', csv.length);
+    
+    const lines = csv.split('\n');
+    let imported = 0;
+    let errors = 0;
+
+    // Определяем, есть ли заголовок
+    const firstLine = lines[0].toLowerCase();
+    const startIndex = firstLine.includes('full_name') || firstLine.includes('фамилия') ? 1 : 0;
+
+    console.log(`Начинаем импорт со строки ${startIndex}, всего строк: ${lines.length}`);
+
+    for (let i = startIndex; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line) continue;
+
+      // Разделяем по запятой, учитывая кавычки
+      const parts = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(p => p.trim().replace(/^"|"$/g, ''));
+      
+      console.log(`Строка ${i}:`, parts);
+      
+      if (parts.length < 4) {
+        console.log(`Пропущена строка ${i}: недостаточно колонок`);
+        errors++;
+        continue;
+      }
+
+      const full_name = parts[0];
+      const birth_year = parseInt(parts[1]);
+      const team = parts[2] || '';
+      const rank = parts[3] || '';
+      const gender = parts[4] ? parts[4].toLowerCase() : 'male';
+
+      if (!full_name || !birth_year || isNaN(birth_year)) {
+        console.log(`Пропущена строка ${i}: неверные данные`);
+        errors++;
+        continue;
+      }
+
       try {
         db.prepare(`
           INSERT OR REPLACE INTO players (full_name, birth_year, team, rank, gender)
           VALUES (?, ?, ?, ?, ?)
-        `).run(full_name.trim(), parseInt(birth_year), team.trim(), rank.trim(), gender.trim().toLowerCase());
+        `).run(full_name, birth_year, team, rank, gender);
         imported++;
+        console.log(`Импортирован: ${full_name}`);
       } catch (error) {
-        console.error('Ошибка импорта строки:', error);
+        console.error(`Ошибка импорта строки ${i}:`, error.message);
+        errors++;
       }
     }
-  }
 
-  res.json({ imported });
+    console.log(`Импорт завершён: ${imported} успешно, ${errors} ошибок`);
+    res.json({ imported, errors });
+  } catch (error) {
+    console.error('Ошибка импорта:', error);
+    res.status(500).json({ error: 'Ошибка импорта: ' + error.message });
+  }
 });
 
 // ============ API ДЛЯ КОМАНД ============
