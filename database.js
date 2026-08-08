@@ -14,7 +14,8 @@ db.exec(`
     first_name TEXT NOT NULL,
     last_name TEXT NOT NULL,
     photo TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    is_admin INTEGER DEFAULT 0
   )
 `);
 
