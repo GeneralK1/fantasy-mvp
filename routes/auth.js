@@ -1,125 +1,82 @@
 const express = require('express');
-const axios = require('axios');
 const jwt = require('jsonwebtoken');
 const db = require('../database');
 
 const router = express.Router();
 
-// Начать авторизацию через VK
-router.get('/vk', (req, res) => {
-  const params = new URLSearchParams({
-    client_id: process.env.VK_APP_ID,
-    redirect_uri: process.env.VK_REDIRECT_URI,
-    response_type: 'code',
-    v: '5.131'
-  });
+// Получить текущего пользователя по VK ID (из заголовка)
+router.get('/me', (req, res) => {
+  const vk_id = req.headers['x-vk-user-id'];
   
-  const vkAuthUrl = `https://oauth.vk.com/authorize?${params.toString()}`;
-  console.log('VK Auth URL:', vkAuthUrl);
-  res.redirect(vkAuthUrl);
+  if (!vk_id) {
+    return res.status(401).json({ error: 'VK ID не передан' });
+  }
+
+  const user = db.prepare('SELECT * FROM vk_users WHERE vk_id = ?').get(vk_id);
+  
+  if (!user) {
+    return res.status(404).json({ error: 'Пользователь не найден' });
+  }
+
+  res.json(user);
 });
 
-// Шаг 2: Callback после авторизации
-router.get('/callback', async (req, res) => {
-  const { code } = req.query;
+// Регистрация/обновление пользователя (вызывается при первом входе)
+router.post('/register', (req, res) => {
+  const { vk_id, first_name, last_name, photo } = req.body;
   
-  if (!code) {
-    return res.status(400).json({ error: 'Код авторизации не получен' });
+  if (!vk_id || !first_name) {
+    return res.status(400).json({ error: 'Не переданы данные пользователя' });
   }
 
   try {
-    // Получаем access_token
-    const tokenResponse = await axios.get('https://oauth.vk.com/access_token', {
-      params: {
-        client_id: process.env.VK_APP_ID,
-        client_secret: process.env.VK_SECRET_KEY,
-        redirect_uri: process.env.VK_REDIRECT_URI,
-        code
-      }
-    });
-
-    const { access_token, user_id } = tokenResponse.data;
-
-    // Получаем данные пользователя
-    const userResponse = await axios.get('https://api.vk.com/method/users.get', {
-      params: {
-        user_ids: user_id,
-        fields: 'photo_100',
-        access_token,
-        v: '5.131'
-      }
-    });
-
-    const vkUser = userResponse.data.response[0];
-
-    // Сохраняем или обновляем пользователя в БД
-    const existingUser = db.prepare('SELECT * FROM vk_users WHERE vk_id = ?').get(user_id);
+    // Проверяем, есть ли уже пользователь
+    const existingUser = db.prepare('SELECT * FROM vk_users WHERE vk_id = ?').get(vk_id);
     
-    if (!existingUser) {
-      db.prepare('INSERT INTO vk_users (vk_id, first_name, last_name, photo) VALUES (?, ?, ?, ?)').run(
-        user_id,
-        vkUser.first_name,
-        vkUser.last_name,
-        vkUser.photo_100
-      );
-    } else {
-      db.prepare('UPDATE vk_users SET first_name = ?, last_name = ?, photo = ? WHERE vk_id = ?').run(
-        vkUser.first_name,
-        vkUser.last_name,
-        vkUser.photo_100,
-        user_id
-      );
+    if (existingUser) {
+      // Обновляем данные
+      db.prepare(`
+        UPDATE vk_users 
+        SET first_name = ?, last_name = ?, photo = ?
+        WHERE vk_id = ?
+      `).run(first_name, last_name || '', photo || '', vk_id);
+      
+      const updatedUser = db.prepare('SELECT * FROM vk_users WHERE vk_id = ?').get(vk_id);
+      return res.json(updatedUser);
     }
 
-    // Создаем JWT токен
-    const token = jwt.sign(
-      { 
-        vk_id: user_id, 
-        first_name: vkUser.first_name, 
-        last_name: vkUser.last_name,
-        photo: vkUser.photo_100,
-        isAdmin: isAdmin
-  },
-  process.env.JWT_SECRET,
-  { expiresIn: '30d' }
-);
-
-res.send(`
-    <!DOCTYPE html>
-  <html>
-  <head><title>Авторизация...</title></head>
-  <body>
-    <script>
-      localStorage.setItem('vk_token', '${token}');
-      window.location.href = '/';
-    </script>
-    <p>Авторизация успешна. Перенаправление...</p>
-  </body>
-  </html>
-`);
-
-    // Отправляем токен клиенту
-    res.redirect(`/?token=${token}`);
+    // Создаём нового пользователя
+    // Проверяем, является ли админом
+    const isAdmin = parseInt(vk_id) === parseInt(process.env.ADMIN_VK_ID || 0);
+    
+    const result = db.prepare(`
+      INSERT INTO vk_users (vk_id, first_name, last_name, photo, is_admin)
+      VALUES (?, ?, ?, ?, ?)
+    `).run(vk_id, first_name, last_name || '', photo || '', isAdmin ? 1 : 0);
+    
+    const newUser = db.prepare('SELECT * FROM vk_users WHERE id = ?').get(result.lastInsertRowid);
+    res.json(newUser);
   } catch (error) {
-    console.error('Ошибка авторизации:', error);
-    res.status(500).json({ error: 'Ошибка авторизации' });
+    console.error('Ошибка регистрации:', error);
+    res.status(500).json({ error: 'Ошибка при регистрации: ' + error.message });
   }
 });
 
-// Проверка токена
-router.get('/me', (req, res) => {
-  const token = req.headers.authorization?.split(' ')[1];
+// Проверить, является ли пользователь админом
+router.get('/check-admin', (req, res) => {
+  const vk_id = req.headers['x-vk-user-id'];
   
-  if (!token) {
-    return res.status(401).json({ error: 'Не авторизован' });
+  if (!vk_id) {
+    return res.status(401).json({ error: 'VK ID не передан' });
   }
 
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    res.json(decoded);
-  } catch (error) {
-    res.status(401).json({ error: 'Недействительный токен' });
+  const user = db.prepare('SELECT is_admin FROM vk_users WHERE vk_id = ?').get(vk_id);
+  
+  if (!user) {
+    return res.json({ isAdmin: false });
   }
+
+  res.json({ isAdmin: Boolean(user.is_admin) });
 });
 
 module.exports = router;

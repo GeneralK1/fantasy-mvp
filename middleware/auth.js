@@ -1,43 +1,43 @@
-const jwt = require('jsonwebtoken');
+const db = require('../database');
 
-// Проверка JWT токена
+// Middleware для проверки авторизации через VK Mini Apps
 function authenticateUser(req, res, next) {
-  const token = req.headers.authorization?.split(' ')[1];
+  const vk_id = req.headers['x-vk-user-id'];
   
-  if (!token) {
-    return res.status(401).json({ error: 'Необходима авторизация' });
+  if (!vk_id) {
+    return res.status(401).json({ error: 'Не авторизован' });
   }
 
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded;
-    next();
-  } catch (error) {
-    return res.status(401).json({ error: 'Недействительный токен' });
+  const user = db.prepare('SELECT * FROM vk_users WHERE vk_id = ?').get(vk_id);
+  
+  if (!user) {
+    return res.status(401).json({ error: 'Пользователь не найден' });
   }
+
+  req.user = user;
+  next();
 }
 
-// Проверка администратора
+// Middleware для проверки админа
 function requireAdmin(req, res, next) {
-  const token = req.headers.authorization?.split(' ')[1];
+  const vk_id = req.headers['x-vk-user-id'];
   
-  if (!token) {
-    return res.status(401).json({ error: 'Необходима авторизация' });
+  if (!vk_id) {
+    return res.status(401).json({ error: 'Не авторизован' });
   }
 
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    
-    // Проверяем, что VK ID совпадает с админским
-    if (decoded.vk_id !== parseInt(process.env.ADMIN_VK_ID)) {
-      return res.status(403).json({ error: 'Доступ запрещен. Требуются права администратора.' });
-    }
-    
-    req.user = decoded;
-    next();
-  } catch (error) {
-    return res.status(401).json({ error: 'Недействительный токен' });
+  const user = db.prepare('SELECT * FROM vk_users WHERE vk_id = ?').get(vk_id);
+  
+  if (!user) {
+    return res.status(401).json({ error: 'Пользователь не найден' });
   }
+
+  if (!user.is_admin) {
+    return res.status(403).json({ error: 'Доступ запрещён' });
+  }
+
+  req.user = user;
+  next();
 }
 
 module.exports = { authenticateUser, requireAdmin };

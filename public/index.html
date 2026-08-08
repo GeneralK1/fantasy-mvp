@@ -19,9 +19,12 @@
     <!-- Выбор события -->
     <div id="eventSelection" class="hidden">
       <div class="header">
-        <h1>🏆 Фэнтези Лига - Спортивный туризм</h1>
+        <div>
+          <h1>🏆 Фэнтези Лига</h1>
+          <p class="subtitle">Спортивный туризм</p>
+        </div>
         <nav class="nav">
-          <a href="/rankings.html">🏅 Рейтинги</a>
+          <a href="/rankings.html"> Рейтинги</a>
           <a href="/events.html">📅 События</a>
           <a href="/admin.html" id="adminLink" class="hidden">⚙️ Админ</a>
         </nav>
@@ -36,24 +39,21 @@
     <!-- Сборка команды -->
     <div id="teamBuilder" class="hidden">
       <div class="header">
-        <h1>🏆 Сборка команды</h1>
+        <div>
+          <h1>🏆 Сборка команды</h1>
+          <p class="subtitle" id="selectedEventName">Событие</p>
+        </div>
         <nav class="nav">
-          <a href="#" onclick="showEventSelection()">← Назад к событиям</a>
+          <a href="#" onclick="showEventSelection()">← Назад</a>
           <a href="/rankings.html">🏅 Рейтинги</a>
-          <a href="/admin.html" id="adminLink2" class="hidden">⚙️ Админ</a>
         </nav>
       </div>
-
-      <div class="card">
-        <h2 id="selectedEventName">Событие</h2>
-      </div>
-
 
       <!-- Статистика -->
       <div class="stats-bar">
         <div class="stat-box">
           <h3>Команда</h3>
-          <div class="value" id="teamNameDisplay" style="font-size: 18px;">-</div>
+          <div class="value small" id="teamNameDisplay">-</div>
         </div>
         <div class="stat-box">
           <h3>Мужчины</h3>
@@ -73,7 +73,7 @@
       <div class="card">
         <h2>✅ Ваш состав</h2>
         <div id="currentTeam">
-          <p style="color: #999; text-align: center; padding: 20px;">Команда пуста. Добавьте спортсменов ниже.</p>
+          <p style="color: var(--text-muted); text-align: center; padding: 20px;">Команда пуста. Добавьте спортсменов ниже.</p>
         </div>
       </div>
 
@@ -96,29 +96,52 @@
     let teamPlayers = [];
     let isRegistered = false;
 
-    // Инициализация
+    // Инициализация VK Mini App
     async function initVK() {
       try {
+        console.log('🚀 Инициализация VK Mini App...');
+        
+        // Инициализируем VK Bridge
         await vkBridge.send('VKWebAppInit', {});
+        console.log('✅ VK Bridge инициализирован');
+
+        // Получаем данные пользователя (АВТОМАТИЧЕСКИ!)
         const userData = await vkBridge.send('VKWebAppGetUserInfo', {});
         vkUserInfo = userData;
+        console.log('👤 Пользователь:', userData);
 
+        // Скрываем экран загрузки
         document.getElementById('loadingScreen').classList.add('hidden');
-        
-        // Проверяем админа
+
+        // Проверяем админа (замените на ваш VK ID)
         if (userData.id === 416323498) {
           document.getElementById('adminLink')?.classList.remove('hidden');
-          document.getElementById('adminLink2')?.classList.remove('hidden');
         }
 
         // Показываем выбор событий
         await loadEvents();
         
       } catch (error) {
-        console.error('Ошибка VK:', error);
-        alert('Ошибка инициализации: ' + error.message);
+        console.error('❌ Ошибка инициализации VK:', error);
+        document.getElementById('loadingScreen').innerHTML = `
+          <div class="card" style="max-width: 500px; margin: 0 auto;">
+            <h2 style="color: var(--danger-dark);">️ Ошибка загрузки</h2>
+            <p style="color: var(--danger-dark); margin-bottom: 20px;">Не удалось подключиться к VK</p>
+            <button onclick="location.reload()" class="btn btn-danger">🔄 Попробовать снова</button>
+          </div>
+        `;
       }
     }
+
+    // Добавляем vk_id во все fetch-запросы
+const originalFetch = window.fetch;
+window.fetch = function(url, options = {}) {
+  if (vkUserInfo && vkUserInfo.id) {
+    options.headers = options.headers || {};
+    options.headers['x-vk-user-id'] = vkUserInfo.id;
+  }
+  return originalFetch(url, options);
+};
 
     // Загрузка событий
     async function loadEvents() {
@@ -131,17 +154,17 @@
         const list = document.getElementById('eventsList');
         
         if (events.length === 0) {
-          list.innerHTML = '<p style="text-align: center; color: #666; padding: 40px;">Нет активных событий для регистрации</p>';
+          list.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 40px;">Нет активных событий для регистрации</p>';
           return;
         }
 
         list.innerHTML = events.map(event => `
-          <div class="event-card" onclick="selectEvent(${event.id}, '${event.name}')">
+          <div class="event-card" onclick="selectEvent(${event.id}, '${event.name.replace(/'/g, "\\'")}')">
             <h3>${event.name}</h3>
             <p>${event.description || ''}</p>
             <div class="dates">
               📅 Регистрация: ${event.registration_start} - ${event.registration_end}<br>
-              🏁 Событие: ${event.event_start_date} - ${event.event_end_date}
+               Событие: ${event.event_start_date} - ${event.event_end_date}
             </div>
           </div>
         `).join('');
@@ -160,7 +183,7 @@
       document.getElementById('eventSelection').classList.add('hidden');
       document.getElementById('teamBuilder').classList.remove('hidden');
       
-      // Получаем или создаём команду для этого события
+      // Получаем или создаём команду
       await getOrCreateTeam();
     }
 
@@ -170,31 +193,28 @@
       document.getElementById('eventSelection').classList.remove('hidden');
     }
 
-  // Получить или создать команду
-async function getOrCreateTeam() {
-  try {
-    const res = await fetch(`/api/teams/by-vk-id?vk_id=${vkUserInfo.id}`);
-    
-    if (res.status === 404) {
-      // Команды нет — создаём новую
-      console.log('Команда не найдена, создаём новую...');
-      await createTeam();
-    } else if (res.ok) {
-      // Команда найдена
-      currentTeam = await res.json();
-      console.log('Найдена команда:', currentTeam);
-      showTeamBuilder();
-    } else {
-      // Другая ошибка
-      const err = await res.json();
-      console.error('Ошибка:', err);
-      alert('Ошибка: ' + err.error);
+    // Получить или создать команду
+    async function getOrCreateTeam() {
+      try {
+        const res = await fetch(`/api/teams/by-vk-id?vk_id=${vkUserInfo.id}`);
+        
+        if (res.status === 404) {
+          console.log('Команда не найдена, создаём новую...');
+          await createTeam();
+        } else if (res.ok) {
+          currentTeam = await res.json();
+          console.log('Найдена команда:', currentTeam);
+          showTeamBuilder();
+        } else {
+          const err = await res.json();
+          console.error('Ошибка:', err);
+          alert('Ошибка: ' + err.error);
+        }
+      } catch (error) {
+        console.error('Ошибка сети:', error);
+        alert('Ошибка сети: ' + error.message);
+      }
     }
-  } catch (error) {
-    console.error('Ошибка сети:', error);
-    alert('Ошибка сети: ' + error.message);
-  }
-}
 
     // Создание команды
     async function createTeam() {
@@ -212,6 +232,7 @@ async function getOrCreateTeam() {
 
         if (res.ok) {
           currentTeam = await res.json();
+          console.log('✅ Команда создана:', currentTeam);
           showTeamBuilder();
         } else {
           const err = await res.json();
@@ -228,42 +249,6 @@ async function getOrCreateTeam() {
       loadTeam();
     }
 
-    // Импорт игроков из CSV
-    async function importPlayers() {
-      const fileInput = document.getElementById('csvFile');
-      const file = fileInput.files[0];
-      
-      if (!file) {
-        alert('Выберите файл CSV');
-        return;
-      }
-
-      const reader = new FileReader();
-      reader.onload = async function(e) {
-        const csv = e.target.result;
-        
-        try {
-          const res = await fetch('/api/players/import', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ csv })
-          });
-
-          if (res.ok) {
-            const result = await res.json();
-            alert(`✅ Импортировано ${result.imported} спортсменов`);
-            loadPlayers();
-          } else {
-            const err = await res.json();
-            alert('Ошибка: ' + err.error);
-          }
-        } catch (error) {
-          alert('Ошибка импорта: ' + error.message);
-        }
-      };
-      reader.readAsText(file);
-    }
-
     // Загрузка игроков
     async function loadPlayers() {
       const res = await fetch('/api/players');
@@ -276,7 +261,7 @@ async function getOrCreateTeam() {
       const available = players.filter(p => !teamPlayers.find(tp => tp.id === p.id));
       
       if (available.length === 0) {
-        list.innerHTML = '<p style="color: #999; text-align: center; padding: 20px; grid-column: 1/-1;">Нет доступных спортсменов</p>';
+        list.innerHTML = '<p style="color: var(--text-muted); text-align: center; padding: 20px; grid-column: 1/-1;">Нет доступных спортсменов</p>';
         return;
       }
 
@@ -285,8 +270,8 @@ async function getOrCreateTeam() {
           <div class="player-info">
             <h3>${p.full_name}</h3>
             <p>📅 ${p.birth_year} г.р.</p>
-            <p>🏃 ${p.team}</p>
-            <p>🏆 ${p.rank}</p>
+            <p> ${p.team}</p>
+            <p>🏆 ${p.rank || 'Без разряда'}</p>
             <p>${p.gender === 'male' ? '♂ Мужчина' : '♀ Женщина'}</p>
           </div>
           <button class="btn btn-success" onclick="addPlayer(${p.id})">Добавить</button>
@@ -331,13 +316,13 @@ async function getOrCreateTeam() {
 
       const teamDiv = document.getElementById('currentTeam');
       if (total === 0) {
-        teamDiv.innerHTML = '<p style="color: #999; text-align: center; padding: 20px;">Команда пуста. Добавьте спортсменов ниже.</p>';
+        teamDiv.innerHTML = '<p style="color: var(--text-muted); text-align: center; padding: 20px;">Команда пуста. Добавьте спортсменов ниже.</p>';
       } else {
         teamDiv.innerHTML = teamPlayers.map(p => `
           <div class="team-slot">
             <div class="player-info">
               <h3>${p.full_name}</h3>
-              <p>${p.team} • ${p.rank} • ${p.gender === 'male' ? '♂' : '♀'}</p>
+              <p>${p.team} • ${p.rank || 'Без разряда'} • ${p.gender === 'male' ? '♂' : '♀'}</p>
             </div>
             <button class="btn btn-danger" onclick="removePlayer(${p.id})">Удалить</button>
           </div>
@@ -347,6 +332,10 @@ async function getOrCreateTeam() {
 
     // Удаление игрока
     async function removePlayer(playerId) {
+      if (isRegistered) {
+        alert('Нельзя удалить спортсмена из зарегистрированной команды!');
+        return;
+      }
       await fetch(`/api/teams/${currentTeam.id}/players/${playerId}`, { 
         method: 'DELETE' 
       });
@@ -360,7 +349,7 @@ async function getOrCreateTeam() {
       const filtered = allPlayers.filter(p => 
         p.full_name.toLowerCase().includes(search) ||
         p.team.toLowerCase().includes(search) ||
-        p.rank.toLowerCase().includes(search)
+        (p.rank && p.rank.toLowerCase().includes(search))
       );
       renderPlayers(filtered);
     });
