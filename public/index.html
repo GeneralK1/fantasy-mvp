@@ -161,6 +161,21 @@
     let allPlayers = [];
     let teamPlayers = [];
     let isConfirmed = false;
+    // Функция форматирования даты
+function formatDate(dateString) {
+  if (!dateString) return 'Не указана';
+  try {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return 'Не указана';
+    return date.toLocaleDateString('ru-RU', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+  } catch (e) {
+    return 'Не указана';
+  }
+}
 
     // Инициализация VK Mini App
     async function initVK() {
