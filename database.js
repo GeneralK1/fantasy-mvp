@@ -25,7 +25,8 @@ db.exec(`
     vk_id INTEGER NOT NULL,
     user_name TEXT NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (vk_id) REFERENCES vk_users(vk_id)
+    FOREIGN KEY (vk_id) REFERENCES vk_users(vk_id),
+    is_confirmed INTEGER DEFAULT 0 
   )
 `);
 db.exec(`

@@ -318,6 +318,37 @@ app.get('/api/teams/by-vk-id', (req, res) => {
   res.json({ ...team, players });
 });
 
+// Подтверждение команды
+app.post('/api/teams/:id/confirm', (req, res) => {
+  const teamId = req.params.id;
+  
+  try {
+    const team = db.prepare('SELECT * FROM teams WHERE id = ?').get(teamId);
+    
+    if (!team) {
+      return res.status(404).json({ error: 'Команда не найдена' });
+    }
+
+    // Проверяем количество игроков
+    const players = db.prepare(`
+      SELECT COUNT(*) as count FROM team_players WHERE team_id = ?
+    `).get(teamId);
+
+    if (players.count !== 8) {
+      return res.status(400).json({ error: 'В команде должно быть ровно 8 спортсменов' });
+    }
+
+    // Подтверждаем команду
+    db.prepare('UPDATE teams SET is_confirmed = 1 WHERE id = ?').run(teamId);
+    
+    console.log(`✅ Команда ${teamId} подтверждена`);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Ошибка подтверждения команды:', error);
+    res.status(500).json({ error: 'Ошибка: ' + error.message });
+  }
+});
+
 // ============ API ДЛЯ СОБЫТИЙ ============
 // Импорт событий из CSV
 app.post('/api/events/import', (req, res) => {

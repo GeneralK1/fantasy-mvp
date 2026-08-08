@@ -11,7 +11,7 @@
   <div class="container">
     <!-- Экран загрузки -->
     <div id="loadingScreen">
-      <div style="font-size: 28px; margin-bottom: 20px;"> Загрузка...</div>
+      <div style="font-size: 28px; margin-bottom: 20px;">⏳ Загрузка...</div>
       <div class="spinner"></div>
       <p style="font-size: 16px; opacity: 0.9;">Инициализация VK Mini App</p>
     </div>
@@ -24,7 +24,7 @@
           <p class="subtitle">Спортивный туризм</p>
         </div>
         <nav class="nav">
-          <a href="/rankings.html"> Рейтинги</a>
+          <a href="/rankings.html">🏅 Рейтинги</a>
           <a href="/events.html">📅 События</a>
           <a href="/admin.html" id="adminLink" class="hidden">⚙️ Админ</a>
         </nav>
@@ -69,6 +69,26 @@
         </div>
       </div>
 
+      <!-- Уведомление о подтверждении -->
+      <div id="confirmedNotice" class="hidden">
+        <div class="alert alert-success" style="text-align: center;">
+          ✅ <strong>Команда подтверждена!</strong><br>
+          Состав зафиксирован и не может быть изменён
+        </div>
+      </div>
+
+      <!-- Кнопка подтверждения (показывается когда 8 человек) -->
+      <div id="confirmBlock" class="hidden">
+        <div class="card" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white;">
+          <h2 style="color: white; margin-bottom: 10px;">✅ Команда собрана!</h2>
+          <p style="margin-bottom: 15px;">Вы набрали 8 спортсменов. Подтвердите состав для регистрации.</p>
+          <p style="font-size: 13px; opacity: 0.9; margin-bottom: 15px;">⚠️ После подтверждения изменить состав будет нельзя!</p>
+          <button class="btn" style="background: white; color: #059669; font-weight: bold; font-size: 16px;" onclick="confirmTeam()">
+            ✅ Подтвердить состав
+          </button>
+        </div>
+      </div>
+
       <!-- Текущий состав -->
       <div class="card">
         <h2>✅ Ваш состав</h2>
@@ -77,12 +97,46 @@
         </div>
       </div>
 
-      <!-- Список доступных спортсменов -->
+      <!-- Фильтры -->
       <div class="card">
         <h2>📋 Доступные спортсмены</h2>
-        <div class="search-box">
-          <input type="text" id="searchInput" placeholder="🔍 Поиск по имени, команде или разряду...">
+        
+        <!-- Фильтры -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 16px;">
+          <div class="form-group" style="margin-bottom: 0;">
+            <label>Пол:</label>
+            <select id="genderFilter" class="form-control" onchange="applyFilters()">
+              <option value="">Все</option>
+              <option value="male">♂ Мужчины</option>
+              <option value="female">♀ Женщины</option>
+            </select>
+          </div>
+          
+          <div class="form-group" style="margin-bottom: 0;">
+            <label>Разряд:</label>
+            <select id="rankFilter" class="form-control" onchange="applyFilters()">
+              <option value="">Все</option>
+              <option value="МС">МС</option>
+              <option value="КМС">КМС</option>
+              <option value="I">I</option>
+              <option value="II">II</option>
+              <option value="III">III</option>
+            </select>
+          </div>
+          
+          <div class="form-group" style="margin-bottom: 0;">
+            <label>Регион:</label>
+            <select id="regionFilter" class="form-control" onchange="applyFilters()">
+              <option value="">Все регионы</option>
+            </select>
+          </div>
         </div>
+
+        <!-- Поиск -->
+        <div class="search-box">
+          <input type="text" id="searchInput" placeholder="🔍 Поиск по имени или команде..." oninput="applyFilters()">
+        </div>
+        
         <div id="playersList" class="players-grid"></div>
       </div>
     </div>
@@ -94,54 +148,40 @@
     let selectedEvent = null;
     let allPlayers = [];
     let teamPlayers = [];
-    let isRegistered = false;
+    let isConfirmed = false;
 
     // Инициализация VK Mini App
     async function initVK() {
       try {
         console.log('🚀 Инициализация VK Mini App...');
         
-        // Инициализируем VK Bridge
         await vkBridge.send('VKWebAppInit', {});
         console.log('✅ VK Bridge инициализирован');
 
-        // Получаем данные пользователя (АВТОМАТИЧЕСКИ!)
         const userData = await vkBridge.send('VKWebAppGetUserInfo', {});
         vkUserInfo = userData;
         console.log('👤 Пользователь:', userData);
 
-        // Скрываем экран загрузки
         document.getElementById('loadingScreen').classList.add('hidden');
 
-        // Проверяем админа (замените на ваш VK ID)
+        // Проверяем админа
         if (userData.id === 416323498) {
           document.getElementById('adminLink')?.classList.remove('hidden');
         }
 
-        // Показываем выбор событий
         await loadEvents();
         
       } catch (error) {
         console.error('❌ Ошибка инициализации VK:', error);
         document.getElementById('loadingScreen').innerHTML = `
           <div class="card" style="max-width: 500px; margin: 0 auto;">
-            <h2 style="color: var(--danger-dark);">️ Ошибка загрузки</h2>
+            <h2 style="color: var(--danger-dark);">⚠️ Ошибка загрузки</h2>
             <p style="color: var(--danger-dark); margin-bottom: 20px;">Не удалось подключиться к VK</p>
             <button onclick="location.reload()" class="btn btn-danger">🔄 Попробовать снова</button>
           </div>
         `;
       }
     }
-
-    // Добавляем vk_id во все fetch-запросы
-const originalFetch = window.fetch;
-window.fetch = function(url, options = {}) {
-  if (vkUserInfo && vkUserInfo.id) {
-    options.headers = options.headers || {};
-    options.headers['x-vk-user-id'] = vkUserInfo.id;
-  }
-  return originalFetch(url, options);
-};
 
     // Загрузка событий
     async function loadEvents() {
@@ -164,7 +204,7 @@ window.fetch = function(url, options = {}) {
             <p>${event.description || ''}</p>
             <div class="dates">
               📅 Регистрация: ${event.registration_start} - ${event.registration_end}<br>
-               Событие: ${event.event_start_date} - ${event.event_end_date}
+              🏁 Событие: ${event.event_start_date} - ${event.event_end_date}
             </div>
           </div>
         `).join('');
@@ -183,7 +223,6 @@ window.fetch = function(url, options = {}) {
       document.getElementById('eventSelection').classList.add('hidden');
       document.getElementById('teamBuilder').classList.remove('hidden');
       
-      // Получаем или создаём команду
       await getOrCreateTeam();
     }
 
@@ -203,6 +242,7 @@ window.fetch = function(url, options = {}) {
           await createTeam();
         } else if (res.ok) {
           currentTeam = await res.json();
+          isConfirmed = currentTeam.is_confirmed === 1;
           console.log('Найдена команда:', currentTeam);
           showTeamBuilder();
         } else {
@@ -212,7 +252,7 @@ window.fetch = function(url, options = {}) {
         }
       } catch (error) {
         console.error('Ошибка сети:', error);
-        alert('Ошибка сети: ' + error.message);
+        await createTeam();
       }
     }
 
@@ -232,6 +272,7 @@ window.fetch = function(url, options = {}) {
 
         if (res.ok) {
           currentTeam = await res.json();
+          isConfirmed = false;
           console.log('✅ Команда создана:', currentTeam);
           showTeamBuilder();
         } else {
@@ -251,36 +292,93 @@ window.fetch = function(url, options = {}) {
 
     // Загрузка игроков
     async function loadPlayers() {
-      const res = await fetch('/api/players');
-      allPlayers = await res.json();
-      renderPlayers(allPlayers);
+      try {
+        const res = await fetch('/api/players');
+        allPlayers = await res.json();
+        
+        // Сортируем по алфавиту
+        allPlayers.sort((a, b) => a.full_name.localeCompare(b.full_name));
+        
+        // Заполняем фильтр регионов
+        fillRegionFilter();
+        
+        applyFilters();
+      } catch (error) {
+        console.error('Ошибка загрузки игроков:', error);
+      }
+    }
+
+    // Заполнить фильтр регионов
+    function fillRegionFilter() {
+      const regions = [...new Set(allPlayers.map(p => p.team).filter(Boolean))].sort();
+      const select = document.getElementById('regionFilter');
+      select.innerHTML = '<option value="">Все регионы</option>';
+      regions.forEach(region => {
+        select.innerHTML += `<option value="${region}">${region}</option>`;
+      });
+    }
+
+    // Применить фильтры
+    function applyFilters() {
+      const genderFilter = document.getElementById('genderFilter').value;
+      const rankFilter = document.getElementById('rankFilter').value;
+      const regionFilter = document.getElementById('regionFilter').value;
+      const searchInput = document.getElementById('searchInput').value.toLowerCase();
+
+      let filtered = allPlayers.filter(p => {
+        // Исключаем уже добавленных в команду
+        if (teamPlayers.find(tp => tp.id === p.id)) return false;
+        
+        // Фильтр по полу
+        if (genderFilter && p.gender !== genderFilter) return false;
+        
+        // Фильтр по разряду
+        if (rankFilter && p.rank !== rankFilter) return false;
+        
+        // Фильтр по региону
+        if (regionFilter && p.team !== regionFilter) return false;
+        
+        // Поиск
+        if (searchInput && !p.full_name.toLowerCase().includes(searchInput) && 
+            !p.team.toLowerCase().includes(searchInput)) return false;
+        
+        return true;
+      });
+
+      renderPlayers(filtered);
     }
 
     function renderPlayers(players) {
       const list = document.getElementById('playersList');
-      const available = players.filter(p => !teamPlayers.find(tp => tp.id === p.id));
       
-      if (available.length === 0) {
+      if (players.length === 0) {
         list.innerHTML = '<p style="color: var(--text-muted); text-align: center; padding: 20px; grid-column: 1/-1;">Нет доступных спортсменов</p>';
         return;
       }
 
-      list.innerHTML = available.map(p => `
+      list.innerHTML = players.map(p => `
         <div class="player-card">
           <div class="player-info">
             <h3>${p.full_name}</h3>
             <p>📅 ${p.birth_year} г.р.</p>
-            <p> ${p.team}</p>
+            <p>🏃 ${p.team}</p>
             <p>🏆 ${p.rank || 'Без разряда'}</p>
             <p>${p.gender === 'male' ? '♂ Мужчина' : '♀ Женщина'}</p>
           </div>
-          <button class="btn btn-success" onclick="addPlayer(${p.id})">Добавить</button>
+          <button class="btn btn-success" onclick="addPlayer(${p.id})" ${isConfirmed ? 'disabled' : ''}>
+            ${isConfirmed ? '✓' : 'Добавить'}
+          </button>
         </div>
       `).join('');
     }
 
     // Добавление игрока
     async function addPlayer(playerId) {
+      if (isConfirmed) {
+        alert('Нельзя изменить подтверждённую команду!');
+        return;
+      }
+
       try {
         const res = await fetch(`/api/teams/${currentTeam.id}/players`, {
           method: 'POST',
@@ -290,7 +388,7 @@ window.fetch = function(url, options = {}) {
 
         if (res.ok) {
           await loadTeam();
-          loadPlayers();
+          applyFilters();
         } else {
           const err = await res.json();
           alert('Ошибка: ' + err.error);
@@ -324,35 +422,64 @@ window.fetch = function(url, options = {}) {
               <h3>${p.full_name}</h3>
               <p>${p.team} • ${p.rank || 'Без разряда'} • ${p.gender === 'male' ? '♂' : '♀'}</p>
             </div>
-            <button class="btn btn-danger" onclick="removePlayer(${p.id})">Удалить</button>
+            ${!isConfirmed ? `<button class="btn btn-danger" onclick="removePlayer(${p.id})">Удалить</button>` : ''}
           </div>
         `).join('');
+      }
+
+      // Показываем кнопку подтверждения если 8 человек и не подтверждено
+      if (total === 8 && !isConfirmed) {
+        document.getElementById('confirmBlock').classList.remove('hidden');
+      } else {
+        document.getElementById('confirmBlock').classList.add('hidden');
+      }
+
+      // Показываем уведомление если подтверждено
+      if (isConfirmed) {
+        document.getElementById('confirmedNotice').classList.remove('hidden');
+      }
+    }
+
+    // Подтверждение команды
+    async function confirmTeam() {
+      if (!confirm('️ Вы уверены? После подтверждения изменить состав команды будет НЕЛЬЗЯ!')) {
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/teams/${currentTeam.id}/confirm`, {
+          method: 'POST'
+        });
+
+        if (res.ok) {
+          isConfirmed = true;
+          document.getElementById('confirmBlock').classList.add('hidden');
+          document.getElementById('confirmedNotice').classList.remove('hidden');
+          alert('✅ Команда подтверждена! Состав зафиксирован.');
+          loadTeam();
+          applyFilters();
+        } else {
+          const err = await res.json();
+          alert('Ошибка: ' + err.error);
+        }
+      } catch (error) {
+        alert('Ошибка: ' + error.message);
       }
     }
 
     // Удаление игрока
     async function removePlayer(playerId) {
-      if (isRegistered) {
-        alert('Нельзя удалить спортсмена из зарегистрированной команды!');
+      if (isConfirmed) {
+        alert('Нельзя удалить спортсмена из подтверждённой команды!');
         return;
       }
+      
       await fetch(`/api/teams/${currentTeam.id}/players/${playerId}`, { 
         method: 'DELETE' 
       });
       await loadTeam();
-      loadPlayers();
+      applyFilters();
     }
-
-    // Поиск
-    document.getElementById('searchInput')?.addEventListener('input', (e) => {
-      const search = e.target.value.toLowerCase();
-      const filtered = allPlayers.filter(p => 
-        p.full_name.toLowerCase().includes(search) ||
-        p.team.toLowerCase().includes(search) ||
-        (p.rank && p.rank.toLowerCase().includes(search))
-      );
-      renderPlayers(filtered);
-    });
 
     // Запуск
     document.addEventListener('DOMContentLoaded', initVK);
