@@ -186,7 +186,7 @@ app.post('/api/players/import', (req, res) => {
 
 // ============ API ДЛЯ КОМАНД ============
 
-// Создание команды (обновлённый endpoint)
+// Создание команды
 app.post('/api/teams', (req, res) => {
   const { user_name, vk_id, event_id } = req.body;
   
@@ -226,6 +226,7 @@ app.post('/api/teams', (req, res) => {
 });
 
 // Получить команду по vk_id и event_id
+// Получить команду по vk_id и event_id
 app.get('/api/teams/by-vk-id', (req, res) => {
   const vk_id = req.query.vk_id;
   const event_id = req.query.event_id;
@@ -237,11 +238,13 @@ app.get('/api/teams/by-vk-id', (req, res) => {
   try {
     let team;
     if (event_id) {
+      // Ищем команду для КОНКРЕТНОГО события
       team = db.prepare(
         'SELECT * FROM teams WHERE vk_id = ? AND event_id = ?'
       ).get(vk_id, event_id);
     } else {
-      team = db.prepare('SELECT * FROM teams WHERE vk_id = ?').get(vk_id);
+      // Если event_id не передан - возвращаем ошибку
+      return res.status(400).json({ error: 'event_id не указан' });
     }
     
     if (!team) {

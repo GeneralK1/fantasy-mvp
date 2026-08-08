@@ -227,16 +227,17 @@
       }
     }
 
-    // Выбор события
-    async function selectEvent(eventId, eventName) {
-      selectedEvent = { id: eventId, name: eventName };
-      
-      document.getElementById('selectedEventName').textContent = '📅 ' + eventName;
-      document.getElementById('eventSelection').classList.add('hidden');
-      document.getElementById('teamBuilder').classList.remove('hidden');
-      
-      await getOrCreateTeam();
-    }
+// Выбор события
+async function selectEvent(eventId, eventName) {
+  selectedEvent = { id: eventId, name: eventName };
+  
+  document.getElementById('selectedEventName').textContent = '📅 ' + eventName;
+  document.getElementById('eventSelection').classList.add('hidden');
+  document.getElementById('teamBuilder').classList.remove('hidden');
+  
+  // Загружаем команду КОНКРЕТНО для этого события
+  await getOrCreateTeamForEvent(eventId);
+}
 
     // Показать выбор событий
     function showEventSelection() {
@@ -244,57 +245,58 @@
       document.getElementById('eventSelection').classList.remove('hidden');
     }
 
-    // Получить или создать команду
-    async function getOrCreateTeam() {
-      try {
-        const res = await fetch(`/api/teams/by-vk-id?vk_id=${vkUserInfo.id}`);
-        
-        if (res.status === 404) {
-          console.log('Команда не найдена, создаём новую...');
-          await createTeam();
-        } else if (res.ok) {
-          currentTeam = await res.json();
-          isConfirmed = currentTeam.is_confirmed === 1;
-          console.log('Найдена команда:', currentTeam);
-          showTeamBuilder();
-        } else {
-          const err = await res.json();
-          console.error('Ошибка:', err);
-          alert('Ошибка: ' + err.error);
-        }
-      } catch (error) {
-        console.error('Ошибка сети:', error);
-        await createTeam();
-      }
+// Получить или создать команду для конкретного события
+async function getOrCreateTeamForEvent(eventId) {
+  try {
+    const res = await fetch(`/api/teams/by-vk-id?vk_id=${vkUserInfo.id}&event_id=${eventId}`);
+    
+    if (res.status === 404) {
+      console.log(`Команда для события ${eventId} не найдена, создаём новую...`);
+      await createTeamForEvent(eventId);
+    } else if (res.ok) {
+      currentTeam = await res.json();
+      isConfirmed = currentTeam.is_confirmed === 1;
+      console.log('Найдена команда для события:', currentTeam);
+      showTeamBuilder();
+    } else {
+      const err = await res.json();
+      console.error('Ошибка:', err);
+      alert('Ошибка: ' + err.error);
     }
+  } catch (error) {
+    console.error('Ошибка сети:', error);
+    alert('Ошибка сети: ' + error.message);
+  }
+}
 
-    // Создание команды
-    async function createTeam() {
-      const teamName = `${vkUserInfo.first_name} ${vkUserInfo.last_name}`;
-      
-      try {
-        const res = await fetch('/api/teams', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            user_name: teamName,
-            vk_id: vkUserInfo.id 
-          })
-        });
+// Создание команды для конкретного события
+async function createTeamForEvent(eventId) {
+  const teamName = `${vkUserInfo.first_name} ${vkUserInfo.last_name}`;
+  
+  try {
+    const res = await fetch('/api/teams', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        user_name: teamName,
+        vk_id: vkUserInfo.id,
+        event_id: eventId  // ВАЖНО: передаём event_id
+      })
+    });
 
-        if (res.ok) {
-          currentTeam = await res.json();
-          isConfirmed = false;
-          console.log('✅ Команда создана:', currentTeam);
-          showTeamBuilder();
-        } else {
-          const err = await res.json();
-          alert('Ошибка: ' + err.error);
-        }
-      } catch (error) {
-        alert('Ошибка: ' + error.message);
-      }
+    if (res.ok) {
+      currentTeam = await res.json();
+      isConfirmed = false;
+      console.log('✅ Команда создана для события:', currentTeam);
+      showTeamBuilder();
+    } else {
+      const err = await res.json();
+      alert('Ошибка: ' + err.error);
     }
+  } catch (error) {
+    alert('Ошибка: ' + error.message);
+  }
+}
 
     function showTeamBuilder() {
       document.getElementById('teamNameDisplay').textContent = currentTeam.user_name;
