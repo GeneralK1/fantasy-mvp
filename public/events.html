@@ -9,36 +9,62 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
   <script>
-// Проверка токена при загрузке
+
+// Проверка авторизации при загрузке
+// Инициализация VK Mini App через VK Bridge
 window.addEventListener('DOMContentLoaded', async () => {
-  const urlParams = new URLSearchParams(window.location.search);
-  const token = urlParams.get('token');
-  
-  if (token) {
-    localStorage.setItem('vk_token', token);
-    window.history.replaceState({}, '', '/');
-  }
-  
-  const savedToken = localStorage.getItem('vk_token');
-  
-  if (!savedToken) {
-    // Перенаправляем на авторизацию
-    window.location.href = '/auth/vk';
-    return;
-  }
-  
-  // Проверяем токен
   try {
-    const res = await fetch('/auth/me', {
-      headers: { 'Authorization': `Bearer ${savedToken}` }
+    console.log('🚀 Инициализация VK Bridge...');
+    
+    // Инициализируем VK Bridge
+    await vkBridge.send('VKWebAppInit', {});
+    console.log('✅ VK Bridge инициализирован');
+    
+    // Получаем данные пользователя
+    const userData = await vkBridge.send('VKWebAppGetUserInfo', {});
+    console.log(' Пользователь:', userData);
+    
+    // Сохраняем данные для использования
+    window.vkUserInfo = userData;
+    window.vk_id = userData.id;
+    
+    // Проверяем/регистрируем пользователя на сервере
+    const res = await fetch('/auth/register', {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'x-vk-user-id': userData.id
+      },
+      body: JSON.stringify({
+        vk_id: userData.id,
+        first_name: userData.first_name,
+        last_name: userData.last_name,
+        photo: userData.photo_100
+      })
     });
     
     if (!res.ok) {
-      localStorage.removeItem('vk_token');
-      window.location.href = '/auth/vk';
+      console.warn('⚠️ Не удалось зарегистрировать пользователя');
     }
+    
+    console.log('✅ Инициализация завершена');
+    
+    // Загружаем данные страницы
+    if (typeof loadEvents === 'function') {
+      await loadEvents(userData.id);
+    }
+    
   } catch (error) {
-    console.error('Ошибка проверки токена:', error);
+    console.error('❌ Ошибка инициализации VK:', error);
+    document.body.innerHTML = `
+      <div style="text-align: center; padding: 50px; font-family: Arial, sans-serif;">
+        <div style="background: #fee2e2; padding: 30px; border-radius: 12px; max-width: 500px; margin: 0 auto;">
+          <h2 style="color: #991b1b; margin-bottom: 15px;">⚠️ Ошибка загрузки</h2>
+          <p style="color: #7f1d1d; margin-bottom: 20px;">Не удалось подключиться к VK</p>
+          <button onclick="location.reload()" style="background: #ef4444; color: white; padding: 12px 24px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600;">🔄 Попробовать снова</button>
+        </div>
+      </div>
+    `;
   }
 });
 
