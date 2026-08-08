@@ -231,23 +231,26 @@
 async function selectEvent(eventId, eventName) {
   selectedEvent = { id: eventId, name: eventName };
   
+  // Сбрасываем состояние
+  currentTeam = null;
+  teamPlayers = [];
+  isConfirmed = false;
+  
   document.getElementById('selectedEventName').textContent = '📅 ' + eventName;
   document.getElementById('eventSelection').classList.add('hidden');
   document.getElementById('teamBuilder').classList.remove('hidden');
   
-  // Загружаем команду КОНКРЕТНО для этого события
+  // Скрываем уведомления
+  document.getElementById('confirmedNotice').classList.add('hidden');
+  document.getElementById('confirmBlock').classList.add('hidden');
+  
+  // Загружаем команду для КОНКРЕТНОГО события
   await getOrCreateTeamForEvent(eventId);
 }
-
-    // Показать выбор событий
-    function showEventSelection() {
-      document.getElementById('teamBuilder').classList.add('hidden');
-      document.getElementById('eventSelection').classList.remove('hidden');
-    }
-
 // Получить или создать команду для конкретного события
 async function getOrCreateTeamForEvent(eventId) {
   try {
+    // Передаём event_id в запросе
     const res = await fetch(`/api/teams/by-vk-id?vk_id=${vkUserInfo.id}&event_id=${eventId}`);
     
     if (res.status === 404) {
@@ -268,7 +271,6 @@ async function getOrCreateTeamForEvent(eventId) {
     alert('Ошибка сети: ' + error.message);
   }
 }
-
 // Создание команды для конкретного события
 async function createTeamForEvent(eventId) {
   const teamName = `${vkUserInfo.first_name} ${vkUserInfo.last_name}`;
@@ -276,7 +278,10 @@ async function createTeamForEvent(eventId) {
   try {
     const res = await fetch('/api/teams', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'x-vk-user-id': vkUserInfo.id  // Добавляем заголовок
+      },
       body: JSON.stringify({ 
         user_name: teamName,
         vk_id: vkUserInfo.id,
@@ -298,11 +303,20 @@ async function createTeamForEvent(eventId) {
   }
 }
 
-    function showTeamBuilder() {
-      document.getElementById('teamNameDisplay').textContent = currentTeam.user_name;
-      loadPlayers();
-      loadTeam();
-    }
+function showTeamBuilder() {
+  document.getElementById('teamNameDisplay').textContent = currentTeam.user_name;
+  
+  // Показываем/скрываем уведомления в зависимости от статуса
+  if (isConfirmed) {
+    document.getElementById('confirmedNotice').classList.remove('hidden');
+    document.getElementById('confirmBlock').classList.add('hidden');
+  } else {
+    document.getElementById('confirmedNotice').classList.add('hidden');
+  }
+  
+  loadPlayers();
+  loadTeam();
+}
 
     // Загрузка игроков
     async function loadPlayers() {
