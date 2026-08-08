@@ -198,6 +198,78 @@
     }
 
     loadData();
+    // Загрузка рейтингов
+async function loadRankings() {
+  try {
+    // Загружаем все события
+    const eventsRes = await fetch('/api/events');
+    const events = await eventsRes.json();
+    
+    const rankingsDiv = document.getElementById('rankingsList');
+    
+    if (events.length === 0) {
+      rankingsDiv.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 40px;">Нет событий</p>';
+      return;
+    }
+    
+    let html = '';
+    
+    for (const event of events) {
+      // Загружаем команды для события
+      const teamsRes = await fetch(`/api/events/${event.id}/teams`);
+      const teams = await teamsRes.json();
+      
+      html += `
+        <div class="card">
+          <h2>🏆 ${event.name}</h2>
+          <p style="color: var(--text-secondary); margin-bottom: 15px;">
+            📅 ${formatDate(event.event_start_date)} — ${formatDate(event.event_end_date)}
+          </p>
+      `;
+      
+      if (teams.length === 0) {
+        html += '<p style="color: var(--text-muted); text-align: center; padding: 20px;">Пока нет зарегистрированных команд</p>';
+      } else {
+        html += '<div class="table-wrapper"><table><thead><tr><th>#</th><th>Команда</th><th>Спортсменов</th><th>Статус</th></tr></thead><tbody>';
+        
+        teams.forEach((team, index) => {
+          const playerCount = team.players ? team.players.length : 0;
+          const status = team.is_confirmed ? '<span class="badge badge-success">Подтверждена</span>' : '<span class="badge badge-warning">Собирается</span>';
+          
+          html += `
+            <tr>
+              <td>${index + 1}</td>
+              <td><strong>${team.user_name}</strong></td>
+              <td>${playerCount}/8</td>
+              <td>${status}</td>
+            </tr>
+          `;
+        });
+        
+        html += '</tbody></table></div>';
+      }
+      
+      html += '</div>';
+    }
+    
+    rankingsDiv.innerHTML = html;
+    
+  } catch (error) {
+    console.error('Ошибка загрузки рейтингов:', error);
+    document.getElementById('rankingsList').innerHTML = `
+      <div class="alert alert-error">
+        ️ Ошибка загрузки рейтингов: ${error.message}
+      </div>
+    `;
+  }
+}
+// Автообновление каждые 5 секунд
+setInterval(() => {
+  loadRankings();
+}, 5000);
+
+// Загружаем при открытии страницы
+document.addEventListener('DOMContentLoaded', loadRankings);
   </script>
 </body>
 </html>

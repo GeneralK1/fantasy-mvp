@@ -316,6 +316,13 @@ function showTeamBuilder() {
   
   loadPlayers();
   loadTeam();
+
+    // После загрузки команды - переходим в рейтинги
+  if (currentTeam && !isConfirmed) {
+    setTimeout(() => {
+      window.location.href = '/rankings.html';
+    }, 1500);
+  }
 }
 
     // Загрузка игроков

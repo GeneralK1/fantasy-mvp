@@ -97,6 +97,10 @@
     // Загрузка событий
     async function loadEvents() {
       try {
+        const startDate = formatDate(event.event_start_date);
+const endDate = formatDate(event.event_end_date);
+const regStart = formatDate(event.registration_start);
+const regEnd = formatDate(event.registration_end);
         // Загружаем активные события
         const activeRes = await fetch('/api/events/active');
         const activeEvents = await activeRes.json();
@@ -152,6 +156,21 @@
         `;
       }
     }
+    // Функция форматирования даты
+function formatDate(dateString) {
+  if (!dateString) return 'Не указана';
+  try {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return 'Не указана';
+    return date.toLocaleDateString('ru-RU', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+  } catch (e) {
+    return 'Не указана';
+  }
+}
 
     // Запуск
     document.addEventListener('DOMContentLoaded', init);

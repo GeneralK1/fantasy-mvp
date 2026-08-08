@@ -441,20 +441,36 @@ app.post('/api/events/import', (req, res) => {
 
   res.json({ imported, errors });
 });
-// Получить активные события
-app.get('/api/events/active', (req, res) => {
+
+// Получить все команды для события
+app.get('/api/events/:eventId/teams', (req, res) => {
+  const eventId = req.params.eventId;
+  
   try {
-    const events = db.prepare(`
-      SELECT * FROM events 
-      WHERE status = 'active' 
-      AND registration_end >= date('now')
-      ORDER BY registration_start
-    `).all();
+    const teams = db.prepare(`
+      SELECT t.*, COUNT(tp.player_id) as player_count
+      FROM teams t
+      LEFT JOIN team_players tp ON t.id = tp.team_id
+      WHERE t.event_id = ? OR t.event_id IS NULL
+      GROUP BY t.id
+      ORDER BY t.created_at
+    `).all(eventId);
     
-    res.json(events);
+    // Добавляем игроков к каждой команде
+    const teamsWithPlayers = teams.map(team => {
+      const players = db.prepare(`
+        SELECT p.* FROM players p
+        JOIN team_players tp ON p.id = tp.player_id
+        WHERE tp.team_id = ?
+      `).all(team.id);
+      
+      return { ...team, players };
+    });
+    
+    res.json(teamsWithPlayers);
   } catch (error) {
-    console.error('Ошибка загрузки событий:', error);
-    res.status(500).json({ error: 'Ошибка загрузки событий' });
+    console.error('Ошибка:', error);
+    res.status(500).json({ error: 'Ошибка: ' + error.message });
   }
 });
 
