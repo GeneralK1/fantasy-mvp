@@ -4,272 +4,253 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Рейтинги - Фэнтези Лига</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/@vkontakte/vk-bridge/dist/browser.min.js"></script>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <div class="container">
-    <div class="header">
-      <h1>🏆 Рейтинги Фэнтези Лиги</h1>
-      <nav>
-        <a href="/">👥 Сборка команды</a>
-        <a href="/events.html">📅 События</a>
-      </nav>
+    <!-- Экран загрузки -->
+    <div id="loadingScreen">
+      <div style="font-size: 28px; margin-bottom: 20px;">⏳ Загрузка...</div>
+      <div class="spinner"></div>
+      <p style="font-size: 16px; opacity: 0.9;">Подключение к VK</p>
     </div>
 
-    <!-- Текущее событие -->
-    <div class="card" id="currentEventCard">
-      <h2>🔥 Текущее событие</h2>
-      <div id="currentEventInfo"></div>
-    </div>
+    <!-- Основной контент -->
+    <div id="mainContent" class="hidden">
+      <div class="header">
+        <div>
+          <h1>🏅 Рейтинги</h1>
+          <p class="subtitle">Спортивный туризм</p>
+        </div>
+        <nav class="nav">
+          <a href="/">🏠 Главная</a>
+          <a href="/events.html"> События</a>
+          <a href="/admin.html" id="adminLink" class="hidden">⚙️ Админ</a>
+        </nav>
+      </div>
 
-    <!-- Рейтинг за текущее событие -->
-    <div class="card">
-      <h2>🏅 Рейтинг команд за текущее событие</h2>
-      <div id="currentRankings"></div>
-    </div>
-
-    <!-- Рейтинг за всё время -->
-    <div class="card">
-      <h2>👑 Рейтинг команд за всё время</h2>
-      <div id="allTimeRankings"></div>
-    </div>
-
-    <!-- Рейтинг спортсменов -->
-    <div class="card">
-      <h2>⭐ Рейтинг спортсменов</h2>
-      <div id="playerRankings"></div>
+      <!-- Список событий с рейтингами -->
+      <div id="rankingsList"></div>
     </div>
   </div>
 
   <script>
-    async function loadData() {
-      await Promise.all([
-        loadCurrentEvent(),
-        loadCurrentRankings(),
-        loadAllTimeRankings(),
-        loadPlayerRankings()
-      ]);
-    }
+    let vkUserInfo = null;
+    let events = [];
+    let refreshInterval = null;
 
-    async function loadCurrentEvent() {
-      const res = await fetch('/api/rankings/current');
-      const data = await res.json();
-
-      const container = document.getElementById('currentEventInfo');
-
-      if (!data.event) {
-        container.innerHTML = '<p style="color: var(--text-muted); text-align: center; padding: 40px;">Нет активного события</p>';
-        return;
+    // Функция форматирования даты
+    function formatDate(dateString) {
+      if (!dateString) return 'Не указана';
+      try {
+        const date = new Date(dateString);
+        if (isNaN(date.getTime())) return 'Не указана';
+        return date.toLocaleDateString('ru-RU', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric'
+        });
+      } catch (e) {
+        return 'Не указана';
       }
-
-      container.innerHTML = `
-        <div style="background: linear-gradient(135deg, rgba(139,92,246,0.15), rgba(59,130,246,0.1)); border: 1px solid rgba(139,92,246,0.2); color: var(--text-primary); padding: 24px; border-radius: 12px;">
-          <h3 style="font-size: 24px; margin-bottom: 12px; font-weight: 700;">${data.event.name}</h3>
-          ${data.event.description ? `<p style="margin-bottom: 12px; color: var(--text-secondary);">${data.event.description}</p>` : ''}
-          <p style="font-size: 14px; color: var(--text-muted);">
-            📅 ${formatDate(data.event.start_date)} — ${formatDate(data.event.end_date)}
-          </p>
-        </div>
-      `;
     }
 
-    async function loadCurrentRankings() {
-      const res = await fetch('/api/rankings/current');
-      const data = await res.json();
+    // Инициализация
+    async function init() {
+      try {
+        console.log('🚀 Инициализация...');
+        
+        try {
+          await vkBridge.send('VKWebAppInit', {});
+          console.log('✅ VK Bridge инициализирован');
+          
+          const userData = await vkBridge.send('VKWebAppGetUserInfo', {});
+          vkUserInfo = userData;
+          console.log('👤 Пользователь:', userData);
+        } catch (vkError) {
+          console.warn('⚠️ VK Bridge недоступен, используем тестовый режим');
+          vkUserInfo = { id: 416323498, first_name: 'Тест', last_name: 'Пользователь' };
+        }
 
-      const container = document.getElementById('currentRankings');
+        document.getElementById('loadingScreen').classList.add('hidden');
+        document.getElementById('mainContent').classList.remove('hidden');
 
-      if (!data.event || data.rankings.length === 0) {
-        container.innerHTML = '<p style="color: var(--text-muted); text-align: center; padding: 40px;">Пока нет зарегистрированных команд</p>';
-        return;
+        if (vkUserInfo.id === 416323498) {
+          document.getElementById('adminLink').classList.remove('hidden');
+        }
+
+        await loadRankings();
+        
+        // Автообновление каждые 5 секунд
+        refreshInterval = setInterval(() => {
+          loadRankings();
+        }, 5000);
+        
+      } catch (error) {
+        console.error('❌ Ошибка инициализации:', error);
+        document.getElementById('loadingScreen').innerHTML = `
+          <div class="card" style="max-width: 500px; margin: 0 auto; text-align: center;">
+            <h2 style="color: var(--danger-dark); margin-bottom: 15px;">⚠️ Ошибка загрузки</h2>
+            <p style="color: var(--danger-dark); margin-bottom: 20px;">${error.message}</p>
+            <button onclick="location.reload()" class="btn btn-danger">🔄 Попробовать снова</button>
+          </div>
+        `;
       }
-
-      container.innerHTML = `
-        <table class="ranking-table">
-          <thead>
-            <tr>
-              <th>Место</th>
-              <th>Команда</th>
-              <th>Очки</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${data.rankings.map((r, i) => `
-              <tr class="${i < 3 ? 'top-three' : ''}">
-                <td>${getMedal(i + 1)}</td>
-                <td>${r.user_name}</td>
-                <td><strong>${r.total_points}</strong></td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-      `;
     }
 
-    async function loadAllTimeRankings() {
-      const res = await fetch('/api/rankings/all-time');
-      const rankings = await res.json();
-
-      const container = document.getElementById('allTimeRankings');
-
-      if (rankings.length === 0) {
-        container.innerHTML = '<p style="color: var(--text-muted); text-align: center; padding: 40px;">Пока нет данных</p>';
-        return;
-      }
-
-      container.innerHTML = `
-        <table class="ranking-table">
-          <thead>
-            <tr>
-              <th>Место</th>
-              <th>Команда</th>
-              <th>Очки</th>
-              <th>Событий</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${rankings.map((r, i) => `
-              <tr class="${i < 3 ? 'top-three' : ''}">
-                <td>${getMedal(i + 1)}</td>
-                <td>${r.user_name}</td>
-                <td><strong>${r.total_points}</strong></td>
-                <td>${r.events_count}</td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-      `;
-    }
-
-    async function loadPlayerRankings() {
-      const res = await fetch('/api/rankings/players');
-      const rankings = await res.json();
-
-      const container = document.getElementById('playerRankings');
-
-      if (rankings.length === 0) {
-        container.innerHTML = '<p style="color: var(--text-muted); text-align: center; padding: 40px;">Пока нет данных</p>';
-        return;
-      }
-
-      container.innerHTML = `
-        <table class="ranking-table">
-          <thead>
-            <tr>
-              <th>Место</th>
-              <th>Спортсмен</th>
-              <th>Команда</th>
-              <th>Разряд</th>
-              <th>Очки</th>
-              <th>Событий</th>
-              <th>Среднее</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${rankings.map((r, i) => `
-              <tr class="${i < 3 ? 'top-three' : ''}">
-                <td>${getMedal(i + 1)}</td>
-                <td>${r.full_name} ${r.gender === 'male' ? '♂' : '♀'}</td>
-                <td>${r.team}</td>
-                <td>${r.rank}</td>
-                <td><strong>${r.total_points}</strong></td>
-                <td>${r.events_count}</td>
-                <td>${r.avg_points.toFixed(1)}</td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-      `;
-    }
-
-    function formatDate(dateStr) {
-      const date = new Date(dateStr);
-      return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
-    }
-
-    function getMedal(place) {
-      if (place === 1) return '🥇';
-      if (place === 2) return '🥈';
-      if (place === 3) return '🥉';
-      return place;
-    }
-
-    loadData();
     // Загрузка рейтингов
-async function loadRankings() {
-  try {
-    // Загружаем все события
-    const eventsRes = await fetch('/api/events');
-    const events = await eventsRes.json();
-    
-    const rankingsDiv = document.getElementById('rankingsList');
-    
-    if (events.length === 0) {
-      rankingsDiv.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 40px;">Нет событий</p>';
-      return;
+    async function loadRankings() {
+      try {
+        const eventsRes = await fetch('/api/events');
+        events = await eventsRes.json();
+        
+        console.log('📦 Загружено событий:', events.length);
+
+        const rankingsDiv = document.getElementById('rankingsList');
+        
+        if (!events || events.length === 0) {
+          rankingsDiv.innerHTML = `
+            <div class="card" style="text-align: center; padding: 60px 20px;">
+              <div style="font-size: 64px; margin-bottom: 20px;">📭</div>
+              <h3 style="color: var(--text-primary); margin-bottom: 10px;">Нет событий</h3>
+              <p style="color: var(--text-secondary);">
+                В настоящее время нет активных событий
+              </p>
+            </div>
+          `;
+          return;
+        }
+
+        let html = '';
+        
+        for (const event of events) {
+          try {
+            const teamsRes = await fetch(`/api/events/${event.id}/teams`);
+            const teams = await teamsRes.json();
+            
+            html += renderEventRanking(event, teams);
+          } catch (error) {
+            console.error(`Ошибка загрузки команд для события ${event.id}:`, error);
+            html += renderEventRanking(event, []);
+          }
+        }
+        
+        rankingsDiv.innerHTML = html;
+        
+      } catch (error) {
+        console.error('Ошибка загрузки рейтингов:', error);
+        document.getElementById('rankingsList').innerHTML = `
+          <div class="alert alert-error">
+            ⚠️ Ошибка загрузки рейтингов: ${error.message}
+          </div>
+        `;
+      }
     }
-    
-    let html = '';
-    
-    for (const event of events) {
-      // Загружаем команды для события
-      const teamsRes = await fetch(`/api/events/${event.id}/teams`);
-      const teams = await teamsRes.json();
-      
-      html += `
+
+    // Рендер рейтинга для одного события
+    function renderEventRanking(event, teams) {
+      const statusBadge = event.status === 'active' 
+        ? '<span class="badge badge-success">🔥 Активно</span>'
+        : '<span class="badge badge-info"> Завершено</span>';
+
+      let html = `
         <div class="card">
-          <h2>🏆 ${event.name}</h2>
-          <p style="color: var(--text-secondary); margin-bottom: 15px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+            <h2 style="margin: 0;">🏆 ${event.name}</h2>
+            ${statusBadge}
+          </div>
+          <p style="color: var(--text-secondary); margin-bottom: 5px;">
             📅 ${formatDate(event.event_start_date)} — ${formatDate(event.event_end_date)}
           </p>
+          <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 20px;">
+            Регистрация: ${formatDate(event.registration_start)} — ${formatDate(event.registration_end)}
+          </p>
       `;
-      
-      if (teams.length === 0) {
-        html += '<p style="color: var(--text-muted); text-align: center; padding: 20px;">Пока нет зарегистрированных команд</p>';
+
+      if (!teams || teams.length === 0) {
+        html += `
+          <div style="text-align: center; padding: 40px; color: var(--text-muted);">
+            <div style="font-size: 48px; margin-bottom: 15px;">🏆</div>
+            <p>Пока нет зарегистрированных команд</p>
+          </div>
+        `;
       } else {
-        html += '<div class="table-wrapper"><table><thead><tr><th>#</th><th>Команда</th><th>Спортсменов</th><th>Статус</th></tr></thead><tbody>';
-        
+        html += `
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Место</th>
+                  <th>Команда</th>
+                  <th>Спортсмены</th>
+                  <th>Очки</th>
+                  <th>Статус</th>
+                </tr>
+              </thead>
+              <tbody>
+        `;
+
         teams.forEach((team, index) => {
           const playerCount = team.players ? team.players.length : 0;
-          const status = team.is_confirmed ? '<span class="badge badge-success">Подтверждена</span>' : '<span class="badge badge-warning">Собирается</span>';
+          const totalPoints = team.total_points || 0;
+          const status = team.is_confirmed 
+            ? '<span class="badge badge-success">✅ Подтверждена</span>' 
+            : '<span class="badge badge-warning">⏳ Собирается</span>';
+          
+          let place = index + 1;
+          let placeDisplay = place;
+          if (place === 1) placeDisplay = ' 1';
+          else if (place === 2) placeDisplay = '🥈 2';
+          else if (place === 3) placeDisplay = '🥉 3';
+          
+          const rowStyle = place === 1 ? 'background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);' : '';
           
           html += `
-            <tr>
-              <td>${index + 1}</td>
-              <td><strong>${team.user_name}</strong></td>
-              <td>${playerCount}/8</td>
+            <tr style="${rowStyle}">
+              <td><strong style="font-size: 18px;">${placeDisplay}</strong></td>
+              <td>
+                <strong>${team.user_name}</strong>
+                <br>
+                <small style="color: var(--text-muted);">
+                  Создана: ${formatDate(team.created_at)}
+                </small>
+              </td>
+              <td>
+                <span style="font-weight: 600; color: ${playerCount === 8 ? 'var(--success)' : 'var(--warning)'};">
+                  ${playerCount}/8
+                </span>
+              </td>
+              <td>
+                <strong style="font-size: 20px; color: var(--primary);">
+                  ${totalPoints}
+                </strong>
+              </td>
               <td>${status}</td>
             </tr>
           `;
         });
-        
-        html += '</tbody></table></div>';
-      }
-      
-      html += '</div>';
-    }
-    
-    rankingsDiv.innerHTML = html;
-    
-  } catch (error) {
-    console.error('Ошибка загрузки рейтингов:', error);
-    document.getElementById('rankingsList').innerHTML = `
-      <div class="alert alert-error">
-        ️ Ошибка загрузки рейтингов: ${error.message}
-      </div>
-    `;
-  }
-}
-// Автообновление каждые 5 секунд
-setInterval(() => {
-  loadRankings();
-}, 5000);
 
-// Загружаем при открытии страницы
-document.addEventListener('DOMContentLoaded', loadRankings);
+        html += `
+              </tbody>
+            </table>
+          </div>
+        `;
+      }
+
+      html += '</div>';
+      return html;
+    }
+
+    // Очистка интервала при уходе со страницы
+    window.addEventListener('beforeunload', () => {
+      if (refreshInterval) {
+        clearInterval(refreshInterval);
+      }
+    });
+
+    // Запуск
+    document.addEventListener('DOMContentLoaded', init);
   </script>
 </body>
 </html>

@@ -443,33 +443,65 @@ app.post('/api/events/import', (req, res) => {
 });
 
 // Получить все команды для события
+// Получить все команды для события (с сортировкой: новые сверху)
 app.get('/api/events/:eventId/teams', (req, res) => {
   const eventId = req.params.eventId;
   
   try {
+    // Получаем все команды для события, отсортированные по дате создания (новые первые)
     const teams = db.prepare(`
       SELECT t.*, COUNT(tp.player_id) as player_count
       FROM teams t
       LEFT JOIN team_players tp ON t.id = tp.team_id
-      WHERE t.event_id = ? OR t.event_id IS NULL
+      WHERE t.event_id = ?
       GROUP BY t.id
-      ORDER BY t.created_at
+      ORDER BY t.created_at DESC
     `).all(eventId);
     
-    // Добавляем игроков к каждой команде
-    const teamsWithPlayers = teams.map(team => {
+    // Добавляем игроков и подсчитываем очки для каждой команды
+    const teamsWithStats = teams.map(team => {
       const players = db.prepare(`
         SELECT p.* FROM players p
         JOIN team_players tp ON p.id = tp.player_id
         WHERE tp.team_id = ?
       `).all(team.id);
       
-      return { ...team, players };
+      // Подсчитываем очки команды
+      let totalPoints = 0;
+      players.forEach(player => {
+        const results = db.prepare(`
+          SELECT * FROM event_results 
+          WHERE event_id = ? AND player_id = ?
+        `).get(eventId, player.id);
+        
+        if (results) {
+          totalPoints += (results.individual_short || 0) +
+                        (results.individual_long || 0) +
+                        (results.tie_short || 0) +
+                        (results.tie_long || 0) +
+                        (results.group_short || 0) +
+                        (results.group_long || 0);
+        }
+      });
+      
+      return { 
+        ...team, 
+        players,
+        total_points: totalPoints
+      };
     });
     
-    res.json(teamsWithPlayers);
+    // Сортируем по очкам (если очки есть), иначе по дате создания
+    teamsWithStats.sort((a, b) => {
+      if (b.total_points !== a.total_points) {
+        return b.total_points - a.total_points; // По очкам (убывание)
+      }
+      return new Date(b.created_at) - new Date(a.created_at); // По дате (новые первые)
+    });
+    
+    res.json(teamsWithStats);
   } catch (error) {
-    console.error('Ошибка:', error);
+    console.error('Ошибка получения команд:', error);
     res.status(500).json({ error: 'Ошибка: ' + error.message });
   }
 });
