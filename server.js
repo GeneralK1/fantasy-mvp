@@ -586,24 +586,62 @@ app.delete('/api/events/:id', (req, res) => {
   }
 });
 
+// Активация события
 app.post('/api/events/:id/activate', (req, res) => {
   const eventId = req.params.id;
   
   try {
-    // Активируем ТОЛЬКО конкретное событие, не трогая остальные
-    db.prepare("UPDATE events SET status = 'active' WHERE id = ?").run(eventId);
-    
+    db.prepare('UPDATE events SET status = ? WHERE id = ?').run('active', eventId);
     console.log(`✅ Событие ${eventId} активировано`);
     res.json({ success: true });
   } catch (error) {
-    console.error('Ошибка активации:', error);
+    console.error('Ошибка:', error);
     res.status(500).json({ error: 'Ошибка: ' + error.message });
   }
 });
 
-app.post('/api/events/:id/complete', (req, res) => {
-  db.prepare("UPDATE events SET status = 'completed' WHERE id = ?").run(req.params.id);
-  res.json({ success: true });
+// Деактивация события
+app.post('/api/events/:id/deactivate', (req, res) => {
+  const eventId = req.params.id;
+  
+  try {
+    db.prepare('UPDATE events SET status = ? WHERE id = ?').run('upcoming', eventId);
+    console.log(`⏸ Событие ${eventId} деактивировано`);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Ошибка:', error);
+    res.status(500).json({ error: 'Ошибка: ' + error.message });
+  }
+});
+
+// Удаление события
+app.delete('/api/events/:id', (req, res) => {
+  const eventId = req.params.id;
+  
+  try {
+    // Удаляем связанные данные
+    db.prepare('DELETE FROM event_results WHERE event_id = ?').run(eventId);
+    db.prepare('DELETE FROM event_teams WHERE event_id = ?').run(eventId);
+    
+    const teams = db.prepare('SELECT id FROM teams WHERE event_id = ?').all(eventId);
+    teams.forEach(team => {
+      db.prepare('DELETE FROM team_players WHERE team_id = ?').run(team.id);
+    });
+    db.prepare('DELETE FROM teams WHERE event_id = ?').run(eventId);
+    
+    // Удаляем событие
+    const result = db.prepare('DELETE FROM events WHERE id = ?').run(eventId);
+    
+    if (result.changes === 0) {
+      return res.status(404).json({ error: 'Событие не найдено' });
+    }
+    
+    console.log(`🗑️ Событие ${eventId} удалено`);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Ошибка:', error);
+    res.status(500).json({ error: 'Ошибка: ' + error.message });
+  }
 });
 
 app.get('/api/events/:id/details', (req, res) => {
