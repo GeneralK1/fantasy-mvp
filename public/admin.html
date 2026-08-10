@@ -893,6 +893,59 @@ async function downloadSpecificBackup(filename) {
 if (document.getElementById('backupList')) {
   loadBackupList();
 }
+// Функция показа уведомлений
+function showNotification(message) {
+  // Проверяем, существует ли уже уведомление
+  const existing = document.querySelector('.admin-notification');
+  if (existing) existing.remove();
+  
+  const notification = document.createElement('div');
+  notification.className = 'admin-notification';
+  notification.style.cssText = `
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+    padding: 16px 24px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    z-index: 9999;
+    animation: slideIn 0.3s ease;
+    font-weight: 600;
+  `;
+  notification.innerHTML = `
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <span style="font-size: 20px;">✅</span>
+      <span>${message}</span>
+    </div>
+  `;
+  
+  document.body.appendChild(notification);
+  
+  // Добавляем анимацию
+  const style = document.createElement('style');
+  style.textContent = `
+    @keyframes slideIn {
+      from { transform: translateX(400px); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+    @keyframes fadeOut {
+      from { opacity: 1; }
+      to { opacity: 0; }
+    }
+  `;
+  document.head.appendChild(style);
+  
+  // Автоматическое скрытие через 3 секунды
+  setTimeout(() => {
+    notification.style.animation = 'fadeOut 0.3s ease';
+    setTimeout(() => {
+      notification.remove();
+      style.remove();
+    }, 300);
+  }, 3000);
+}
   </script>
 
 </body>
