@@ -1140,7 +1140,208 @@ app.get('/api/events/active', (req, res) => {
     res.status(500).json({ error: 'Ошибка: ' + error.message });
   }
 });
+// ========== НАЧИСЛЕНИЕ ОЧКОВ ==========
 
+// Получить спортсменов события (из команд + все с результатами)
+app.get('/api/events/:eventId/players', (req, res) => {
+  const eventId = req.params.eventId;
+  
+  try {
+    // Все спортсмены из команд этого события
+    const players = db.prepare(`
+      SELECT DISTINCT p.id, p.full_name, p.team, p.rank, p.gender, p.birth_year
+      FROM players p
+      JOIN team_players tp ON p.id = tp.player_id
+      JOIN teams t ON tp.team_id = t.id
+      WHERE t.event_id = ?
+      ORDER BY p.full_name ASC
+    `).all(eventId);
+    
+    // Добавляем текущие очки
+    const playersWithPoints = players.map(player => {
+      const result = db.prepare(`
+        SELECT points FROM event_results 
+        WHERE event_id = ? AND player_id = ?
+      `).get(eventId, player.id);
+      
+      return {
+        ...player,
+        points: result ? result.points : 0
+      };
+    });
+    
+    res.json(playersWithPoints);
+  } catch (error) {
+    console.error('Ошибка:', error);
+    res.status(500).json({ error: 'Ошибка: ' + error.message });
+  }
+});
+
+// Начислить очки спортсмену (ОДНО число)
+app.post('/api/events/:eventId/results', (req, res) => {
+  const eventId = req.params.eventId;
+  const { player_id, points } = req.body;
+  
+  if (!player_id || points === undefined) {
+    return res.status(400).json({ error: 'Не указан player_id или points' });
+  }
+  
+  try {
+    db.prepare(`
+      INSERT OR REPLACE INTO event_results (event_id, player_id, points)
+      VALUES (?, ?, ?)
+    `).run(eventId, player_id, points);
+    
+    // Пересчитываем очки команды
+    const team = db.prepare(`
+      SELECT tp.team_id FROM team_players tp WHERE tp.player_id = ?
+    `).get(player_id);
+    
+    if (team) {
+      const teamPlayers = db.prepare(`
+        SELECT tp.player_id FROM team_players tp WHERE tp.team_id = ?
+      `).all(team.team_id);
+      
+      let teamTotal = 0;
+      teamPlayers.forEach(tp => {
+        const result = db.prepare(
+          'SELECT points FROM event_results WHERE event_id = ? AND player_id = ?'
+        ).get(eventId, tp.player_id);
+        if (result) teamTotal += result.points || 0;
+      });
+      
+      // Обновляем или создаём запись в event_teams
+      const existing = db.prepare(
+        'SELECT id FROM event_teams WHERE event_id = ? AND team_id = ?'
+      ).get(eventId, team.team_id);
+      
+      if (existing) {
+        db.prepare(
+          'UPDATE event_teams SET total_points = ? WHERE event_id = ? AND team_id = ?'
+        ).run(teamTotal, eventId, team.team_id);
+      } else {
+        db.prepare(
+          'INSERT INTO event_teams (event_id, team_id, total_points) VALUES (?, ?, ?)'
+        ).run(eventId, team.team_id, teamTotal);
+      }
+    }
+    
+    console.log(`✅ Начислено ${points} очков спортсмену ${player_id} на событие ${eventId}`);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Ошибка:', error);
+    res.status(500).json({ error: 'Ошибка: ' + error.message });
+  }
+});
+
+// Массовое начисление очков (несколько спортсменов сразу)
+app.post('/api/events/:eventId/results/batch', (req, res) => {
+  const eventId = req.params.eventId;
+  const { results } = req.body; // [{player_id, points}, ...]
+  
+  if (!results || !Array.isArray(results)) {
+    return res.status(400).json({ error: 'Неверный формат данных' });
+  }
+  
+  try {
+    const stmt = db.prepare(`
+      INSERT OR REPLACE INTO event_results (event_id, player_id, points)
+      VALUES (?, ?, ?)
+    `);
+    
+    const insertMany = db.transaction((results) => {
+      for (const r of results) {
+        stmt.run(eventId, r.player_id, r.points || 0);
+      }
+    });
+    
+    insertMany(results);
+    
+    // Пересчитываем очки всех команд события
+    const teams = db.prepare(
+      'SELECT DISTINCT t.id FROM teams t JOIN team_players tp ON t.id = tp.team_id WHERE t.event_id = ?'
+    ).all(eventId);
+    
+    teams.forEach(team => {
+      const teamPlayers = db.prepare(
+        'SELECT player_id FROM team_players WHERE team_id = ?'
+      ).all(team.id);
+      
+      let teamTotal = 0;
+      teamPlayers.forEach(tp => {
+        const result = db.prepare(
+          'SELECT points FROM event_results WHERE event_id = ? AND player_id = ?'
+        ).get(eventId, tp.player_id);
+        if (result) teamTotal += result.points || 0;
+      });
+      
+      const existing = db.prepare(
+        'SELECT id FROM event_teams WHERE event_id = ? AND team_id = ?'
+      ).get(eventId, team.id);
+      
+      if (existing) {
+        db.prepare(
+          'UPDATE event_teams SET total_points = ? WHERE event_id = ? AND team_id = ?'
+        ).run(teamTotal, eventId, team.id);
+      } else {
+        db.prepare(
+          'INSERT INTO event_teams (event_id, team_id, total_points) VALUES (?, ?, ?)'
+        ).run(eventId, team.id, teamTotal);
+      }
+    });
+    
+    console.log(`✅ Массово начислены очки для ${results.length} спортсменов на событие ${eventId}`);
+    res.json({ success: true, count: results.length });
+  } catch (error) {
+    console.error('Ошибка:', error);
+    res.status(500).json({ error: 'Ошибка: ' + error.message });
+  }
+});
+
+// Общий рейтинг спортсменов (сумма очков по всем событиям)
+app.get('/api/players/overall-rating', (req, res) => {
+  try {
+    const rating = db.prepare(`
+      SELECT 
+        p.id,
+        p.full_name,
+        p.team,
+        p.rank,
+        p.gender,
+        p.birth_year,
+        COALESCE(SUM(er.points), 0) as total_points,
+        COUNT(er.event_id) as events_count
+      FROM players p
+      LEFT JOIN event_results er ON p.id = er.player_id
+      GROUP BY p.id
+      HAVING total_points > 0
+      ORDER BY total_points DESC, p.full_name ASC
+    `).all();
+    
+    res.json(rating);
+  } catch (error) {
+    console.error('Ошибка:', error);
+    res.status(500).json({ error: 'Ошибка: ' + error.message });
+  }
+});
+
+// Сброс всех данных
+app.post('/api/admin/reset-all', (req, res) => {
+  try {
+    db.exec('DELETE FROM event_results');
+    db.exec('DELETE FROM event_teams');
+    db.exec('DELETE FROM team_players');
+    db.exec('DELETE FROM teams');
+    db.exec('DELETE FROM players');
+    db.exec('DELETE FROM events');
+    
+    console.log('🗑️ Все данные сброшены');
+    res.json({ success: true, message: 'Все данные успешно удалены' });
+  } catch (error) {
+    console.error('Ошибка сброса:', error);
+    res.status(500).json({ error: 'Ошибка: ' + error.message });
+  }
+});
 
 app.listen(PORT, () => {
   console.log('✅ Сервер запущен: http://localhost:' + PORT);
