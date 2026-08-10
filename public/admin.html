@@ -965,13 +965,23 @@ function showNotification(message) {
   }, 3000);
 }
 
-// Автоматически загружаем события при загрузке страницы
-document.addEventListener('DOMContentLoaded', () => {
-  // Показываем первую вкладку по умолчанию
-  showTab('players');
-  
-  // Загружаем события сразу
-  setTimeout(() => loadEvents(), 500);
+// Принудительно загружаем события при переключении на вкладку
+const originalShowTab = showTab;
+showTab = function(tabName) {
+  originalShowTab(tabName);
+  if (tabName === 'events') {
+    console.log('🔄 Загрузка событий...');
+    setTimeout(() => loadEvents(), 100);
+  }
+};
+
+// Загружаем события при старте
+window.addEventListener('DOMContentLoaded', () => {
+  console.log('📄 Страница загружена, ждём 1 секунду...');
+  setTimeout(() => {
+    console.log('🔄 Принудительная загрузка событий...');
+    loadEvents();
+  }, 1000);
 });
   </script>
 
