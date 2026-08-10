@@ -426,12 +426,6 @@ function showTeamBuilder() {
   loadPlayers();
   loadTeam();
 
-    // После загрузки команды - переходим в рейтинги
-  if (currentTeam && !isConfirmed) {
-    setTimeout(() => {
-      window.location.href = '/rankings.html';
-    }, 1500);
-  }
 }
 
     // Загрузка игроков
@@ -525,30 +519,32 @@ function applyFilters() {
     }
 
     // Добавление игрока
-    async function addPlayer(playerId) {
-      if (isConfirmed) {
-        alert('Нельзя изменить подтверждённую команду!');
-        return;
-      }
+async function addPlayer(playerId) {
+  if (isConfirmed) {
+    alert('Нельзя изменить подтверждённую команду!');
+    return;
+  }
 
-      try {
-        const res = await fetch(`/api/teams/${currentTeam.id}/players`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ player_id: playerId })
-        });
+  try {
+    const res = await fetch(`/api/teams/${currentTeam.id}/players`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ player_id: playerId })
+    });
 
-        if (res.ok) {
-          await loadTeam();
-          applyFilters();
-        } else {
-          const err = await res.json();
-          alert('Ошибка: ' + err.error);
-        }
-      } catch (error) {
-        alert('Ошибка: ' + error.message);
-      }
+    if (res.ok) {
+      await loadTeam();
+      applyFilters();
+      // ❌ УБЕРИТЕ ЭТУ СТРОКУ, если она есть:
+      // setTimeout(() => { window.location.href = '/rankings.html'; }, 1500);
+    } else {
+      const err = await res.json();
+      alert('Ошибка: ' + err.error);
     }
+  } catch (error) {
+    alert('Ошибка: ' + error.message);
+  }
+}
 
     // Загрузка команды
     async function loadTeam() {
@@ -603,6 +599,7 @@ function closeConfirmModal() {
 }
 
 // Выполнение подтверждения
+// Выполнение подтверждения
 async function executeConfirmTeam() {
   try {
     const res = await fetch(`/api/teams/${currentTeam.id}/confirm`, {
@@ -620,6 +617,12 @@ async function executeConfirmTeam() {
       
       loadTeam();
       applyFilters();
+      
+      // ✅ Редирект на рейтинги ТОЛЬКО здесь (через 3 секунды)
+      setTimeout(() => {
+        window.location.href = '/rankings.html';
+      }, 3000);
+      
     } else {
       const err = await res.json();
       alert('Ошибка: ' + err.error);
