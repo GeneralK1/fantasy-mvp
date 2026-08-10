@@ -3,6 +3,9 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const db = require('./database');
+const fs = require('fs');        // ← ДОБАВИТЬ
+const path = require('path');    // ← ДОБАВИТЬ
+const multer = require('multer'); // ← УБЕДИТЬСЯ, ЧТО ЕСТЬ
 
 
 const app = express();
