@@ -964,6 +964,15 @@ function showNotification(message) {
     }, 300);
   }, 3000);
 }
+
+// Автоматически загружаем события при загрузке страницы
+document.addEventListener('DOMContentLoaded', () => {
+  // Показываем первую вкладку по умолчанию
+  showTab('players');
+  
+  // Загружаем события сразу
+  setTimeout(() => loadEvents(), 500);
+});
   </script>
 
 </body>
