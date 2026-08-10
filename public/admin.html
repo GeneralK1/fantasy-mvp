@@ -481,6 +481,9 @@ async function importEventsFromCsv() {
             ${e.status !== 'completed' && e.status === 'active' ? `<button class="btn btn-danger btn-sm" onclick="completeEvent(${e.id})">✅ Завершить</button>` : ''}
             <button class="btn btn-danger btn-sm" onclick="deleteEvent(${e.id})">🗑️</button>
           </div>
+          <button class="btn btn-danger" onclick="deleteEvent(${event.id})" style="padding: 6px 12px; font-size: 12px;">
+  🗑️ Удалить
+</button>
         </div>
       `).join('');
     }
@@ -524,12 +527,29 @@ async function importEventsFromCsv() {
       loadEvents();
     }
 
-    async function deleteEvent(id) {
-      if (!confirm('Удалить событие?')) return;
-      await fetch(`/api/events/${id}`, { method: 'DELETE' });
-      document.getElementById('eventDetails').classList.add('hidden');
-      loadEvents();
+    // Удаление события
+async function deleteEvent(eventId) {
+  if (!confirm('Вы уверены, что хотите удалить это событие? Все связанные команды и результаты будут удалены!')) {
+    return;
+  }
+  
+  try {
+    const res = await fetch(`/api/events/${eventId}`, {
+      method: 'DELETE'
+    });
+    
+    const result = await res.json();
+    
+    if (res.ok) {
+      showNotification('✅ Событие удалено');
+      loadEvents(); // Перезагружаем список событий
+    } else {
+      alert('Ошибка: ' + result.error);
     }
+  } catch (error) {
+    alert('Ошибка: ' + error.message);
+  }
+}
 
     async function viewEvent(id) {
       const res = await fetch(`/api/events/${id}/details`);

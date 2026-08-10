@@ -555,11 +555,35 @@ app.put('/api/events/:id', (req, res) => {
   res.json(event);
 });
 
+// Удаление события
 app.delete('/api/events/:id', (req, res) => {
-  db.prepare('DELETE FROM event_results WHERE event_id = ?').run(req.params.id);
-  db.prepare('DELETE FROM event_teams WHERE event_id = ?').run(req.params.id);
-  db.prepare('DELETE FROM events WHERE id = ?').run(req.params.id);
-  res.json({ success: true });
+  const eventId = req.params.id;
+  
+  try {
+    // Сначала удаляем связанные данные
+    db.prepare('DELETE FROM event_results WHERE event_id = ?').run(eventId);
+    db.prepare('DELETE FROM event_teams WHERE event_id = ?').run(eventId);
+    
+    // Удаляем команды этого события
+    const teams = db.prepare('SELECT id FROM teams WHERE event_id = ?').all(eventId);
+    teams.forEach(team => {
+      db.prepare('DELETE FROM team_players WHERE team_id = ?').run(team.id);
+    });
+    db.prepare('DELETE FROM teams WHERE event_id = ?').run(eventId);
+    
+    // Удаляем само событие
+    const result = db.prepare('DELETE FROM events WHERE id = ?').run(eventId);
+    
+    if (result.changes === 0) {
+      return res.status(404).json({ error: 'Событие не найдено' });
+    }
+    
+    console.log(`🗑️ Событие ${eventId} удалено`);
+    res.json({ success: true, message: 'Событие удалено' });
+  } catch (error) {
+    console.error('Ошибка удаления:', error);
+    res.status(500).json({ error: 'Ошибка: ' + error.message });
+  }
 });
 
 app.post('/api/events/:id/activate', (req, res) => {
