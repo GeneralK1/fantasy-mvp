@@ -175,6 +175,46 @@
     </div>
   </div>
 
+  <!-- Кнопка полного сброса -->
+<div class="card" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white;">
+  <h2 style="color: white; margin-bottom: 15px;">⚠️ Опасная зона</h2>
+  <p style="color: rgba(255,255,255,0.9); margin-bottom: 20px;">
+    Полностью обнулить все данные: удалить всех спортсменов, команды, события и результаты.
+    Используется перед началом нового сезона.
+  </p>
+  <button class="btn" style="background: white; color: #dc2626; font-weight: bold; padding: 14px 32px;" onclick="showResetModal()">
+    🗑️ Сбросить все данные
+  </button>
+</div>
+
+<!-- Модальное окно подтверждения сброса -->
+<div id="resetModal" class="modal-overlay hidden">
+  <div class="modal" style="max-width: 500px; text-align: center;">
+    <div style="font-size: 64px; margin-bottom: 20px;">⚠️</div>
+    <h2 style="color: var(--danger); margin-bottom: 15px;">Подтверждение сброса</h2>
+    <p style="color: var(--text-secondary); margin-bottom: 10px; line-height: 1.6;">
+      Вы собираетесь <strong>УДАЛИТЬ ВСЕ ДАННЫЕ</strong>:
+    </p>
+    <ul style="text-align: left; color: var(--text-secondary); margin-bottom: 20px; padding-left: 20px;">
+      <li>Всех спортсменов</li>
+      <li>Все команды</li>
+      <li>Все события</li>
+      <li>Все результаты и очки</li>
+    </ul>
+    <p style="color: var(--danger); font-weight: 600; margin-bottom: 20px;">
+      ⚠️ Это действие НЕВОЗМОЖНО отменить!
+    </p>
+    <div style="display: flex; gap: 12px; justify-content: center;">
+      <button class="btn btn-secondary" onclick="closeResetModal()">
+        Отмена
+      </button>
+      <button class="btn btn-danger" onclick="executeReset()" style="padding: 12px 32px;">
+        ️ Удалить всё
+      </button>
+    </div>
+  </div>
+</div>
+
   <script>
     // Переключение вкладок
     document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -623,6 +663,48 @@ async function importEventsFromCsv() {
     // Загрузка данных при старте
     loadPlayers();
     loadEvents();
+
+function showResetModal() {
+  document.getElementById('resetModal').classList.remove('hidden');
+}
+
+function closeResetModal() {
+  document.getElementById('resetModal').classList.add('hidden');
+}
+
+async function executeReset() {
+  try {
+    const res = await fetch('/api/admin/reset-all', { method: 'POST' });
+    
+    if (res.ok) {
+      closeResetModal();
+      showSuccessNotification('Все данные успешно удалены!');
+      setTimeout(() => location.reload(), 2000);
+    } else {
+      const err = await res.json();
+      alert('Ошибка: ' + err.error);
+    }
+  } catch (error) {
+    alert('Ошибка: ' + error.message);
+  }
+}
+//Функция удаления
+function showSuccessNotification(message) {
+  const notification = document.createElement('div');
+  notification.className = 'alert alert-success';
+  notification.style.cssText = `
+    position: fixed; top: 20px; right: 20px; z-index: 9999;
+    min-width: 300px; animation: slideIn 0.3s ease;
+  `;
+  notification.innerHTML = `
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <span style="font-size: 24px;">✅</span>
+      <div><strong>${message}</strong></div>
+    </div>
+  `;
+  document.body.appendChild(notification);
+  setTimeout(() => notification.remove(), 3000);
+}
   </script>
 </body>
 </html>

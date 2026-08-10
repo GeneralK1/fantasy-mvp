@@ -67,13 +67,10 @@ db.exec(`CREATE TABLE IF NOT EXISTS event_results (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   event_id INTEGER NOT NULL,
   player_id INTEGER NOT NULL,
-  individual_short INTEGER DEFAULT 0,
-  individual_long INTEGER DEFAULT 0,
-  tie_short INTEGER DEFAULT 0,
-  tie_long INTEGER DEFAULT 0,
-  group_short INTEGER DEFAULT 0,
-  group_long INTEGER DEFAULT 0,
-  UNIQUE(event_id, player_id)
+  points INTEGER DEFAULT 0,
+  UNIQUE(event_id, player_id),
+  FOREIGN KEY (event_id) REFERENCES events(id),
+  FOREIGN KEY (player_id) REFERENCES players(id)
 )`);
 
 module.exports = db;

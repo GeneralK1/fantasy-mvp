@@ -448,7 +448,6 @@ app.get('/api/events/:eventId/teams', (req, res) => {
   const eventId = req.params.eventId;
   
   try {
-    // Получаем все команды для события, отсортированные по дате создания (новые первые)
     const teams = db.prepare(`
       SELECT t.*, COUNT(tp.player_id) as player_count
       FROM teams t
@@ -458,7 +457,6 @@ app.get('/api/events/:eventId/teams', (req, res) => {
       ORDER BY t.created_at DESC
     `).all(eventId);
     
-    // Добавляем игроков и подсчитываем очки для каждой команды
     const teamsWithStats = teams.map(team => {
       const players = db.prepare(`
         SELECT p.* FROM players p
@@ -466,42 +464,31 @@ app.get('/api/events/:eventId/teams', (req, res) => {
         WHERE tp.team_id = ?
       `).all(team.id);
       
-      // Подсчитываем очки команды
       let totalPoints = 0;
       players.forEach(player => {
-        const results = db.prepare(`
-          SELECT * FROM event_results 
+        const result = db.prepare(`
+          SELECT points FROM event_results 
           WHERE event_id = ? AND player_id = ?
         `).get(eventId, player.id);
         
-        if (results) {
-          totalPoints += (results.individual_short || 0) +
-                        (results.individual_long || 0) +
-                        (results.tie_short || 0) +
-                        (results.tie_long || 0) +
-                        (results.group_short || 0) +
-                        (results.group_long || 0);
+        if (result) {
+          totalPoints += result.points || 0;
         }
       });
       
-      return { 
-        ...team, 
-        players,
-        total_points: totalPoints
-      };
+      return { ...team, players, total_points: totalPoints };
     });
     
-    // Сортируем по очкам (если очки есть), иначе по дате создания
     teamsWithStats.sort((a, b) => {
       if (b.total_points !== a.total_points) {
-        return b.total_points - a.total_points; // По очкам (убывание)
+        return b.total_points - a.total_points;
       }
-      return new Date(b.created_at) - new Date(a.created_at); // По дате (новые первые)
+      return new Date(b.created_at) - new Date(a.created_at);
     });
     
     res.json(teamsWithStats);
   } catch (error) {
-    console.error('Ошибка получения команд:', error);
+    console.error('Ошибка:', error);
     res.status(500).json({ error: 'Ошибка: ' + error.message });
   }
 });
@@ -657,44 +644,117 @@ app.post('/api/teams/:teamId/register', (req, res) => {
   res.json({ success: true, event: event });
 });
 
-// Внести результаты спортсменов по событию
+
+// Начислить очки спортсмену (ОДНО число на событие)
 app.post('/api/events/:eventId/results', (req, res) => {
-  const { results } = req.body;
   const eventId = req.params.eventId;
+  const { player_id, points } = req.body;
   
-  if (!Array.isArray(results)) {
-    return res.status(400).json({ error: 'results должен быть массивом' });
+  if (!player_id || points === undefined) {
+    return res.status(400).json({ error: 'Не указан player_id или points' });
   }
   
-  // INSERT OR REPLACE автоматически обновляет если есть, или создает если нет
-  const stmt = db.prepare(`
-    INSERT OR REPLACE INTO event_results 
-    (event_id, player_id, individual_short, individual_long, tie_short, tie_long, group_short, group_long) 
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-  `);
-  
-  const transaction = db.transaction((results) => {
-    for (const r of results) {
-      // Сохраняем только если есть хоть какие-то очки
-      if (r.individual_short || r.individual_long || r.tie_short || r.tie_long || r.group_short || r.group_long) {
-        stmt.run(
-          eventId, 
-          r.player_id, 
-          r.individual_short || 0, 
-          r.individual_long || 0, 
-          r.tie_short || 0, 
-          r.tie_long || 0, 
-          r.group_short || 0, 
-          r.group_long || 0
-        );
-      }
+  try {
+    db.prepare(`
+      INSERT OR REPLACE INTO event_results (event_id, player_id, points)
+      VALUES (?, ?, ?)
+    `).run(eventId, player_id, points);
+    
+    // Пересчитываем очки команды спортсмена
+    const team = db.prepare(`
+      SELECT tp.team_id FROM team_players tp WHERE tp.player_id = ?
+    `).get(player_id);
+    
+    if (team) {
+      const teamPlayers = db.prepare(`
+        SELECT tp.player_id FROM team_players tp WHERE tp.team_id = ?
+      `).all(team.team_id);
+      
+      let teamTotal = 0;
+      teamPlayers.forEach(tp => {
+        const result = db.prepare(
+          'SELECT points FROM event_results WHERE event_id = ? AND player_id = ?'
+        ).get(eventId, tp.player_id);
+        if (result) teamTotal += result.points || 0;
+      });
+      
+      db.prepare(`
+        UPDATE event_teams SET total_points = ? 
+        WHERE event_id = ? AND team_id = ?
+      `).run(teamTotal, eventId, team.team_id);
     }
-  });
+    
+    console.log(`✅ Начислено ${points} очков спортсмену ${player_id} на событие ${eventId}`);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Ошибка:', error);
+    res.status(500).json({ error: 'Ошибка: ' + error.message });
+  }
+});
+
+// Получить результаты события
+app.get('/api/events/:eventId/results', (req, res) => {
+  const eventId = req.params.eventId;
   
-  transaction(results);
-  recalculateTeamScores(eventId);
-  
-  res.json({ success: true });
+  try {
+    const results = db.prepare(`
+      SELECT er.*, p.full_name, p.team, p.rank, p.gender
+      FROM event_results er
+      JOIN players p ON er.player_id = p.id
+      WHERE er.event_id = ?
+      ORDER BY er.points DESC
+    `).all(eventId);
+    
+    res.json(results);
+  } catch (error) {
+    console.error('Ошибка:', error);
+    res.status(500).json({ error: 'Ошибка: ' + error.message });
+  }
+});
+
+// Общий рейтинг спортсменов (сумма очков по всем событиям)
+app.get('/api/players/overall-rating', (req, res) => {
+  try {
+    const rating = db.prepare(`
+      SELECT 
+        p.id,
+        p.full_name,
+        p.team,
+        p.rank,
+        p.gender,
+        p.birth_year,
+        COALESCE(SUM(er.points), 0) as total_points,
+        COUNT(er.event_id) as events_count
+      FROM players p
+      LEFT JOIN event_results er ON p.id = er.player_id
+      GROUP BY p.id
+      HAVING total_points > 0
+      ORDER BY total_points DESC, p.full_name ASC
+    `).all();
+    
+    res.json(rating);
+  } catch (error) {
+    console.error('Ошибка:', error);
+    res.status(500).json({ error: 'Ошибка: ' + error.message });
+  }
+});
+
+// Сброс всех данных (кнопка на админке)
+app.post('/api/admin/reset-all', (req, res) => {
+  try {
+    db.exec('DELETE FROM event_results');
+    db.exec('DELETE FROM event_teams');
+    db.exec('DELETE FROM team_players');
+    db.exec('DELETE FROM teams');
+    db.exec('DELETE FROM players');
+    db.exec('DELETE FROM events');
+    
+    console.log('🗑️ Все данные сброшены');
+    res.json({ success: true, message: 'Все данные успешно удалены' });
+  } catch (error) {
+    console.error('Ошибка сброса:', error);
+    res.status(500).json({ error: 'Ошибка: ' + error.message });
+  }
 });
   
 
