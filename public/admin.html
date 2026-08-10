@@ -447,11 +447,61 @@ async function importEventsFromCsv() {
     // ============ СОБЫТИЯ ============
     let allEvents = [];
 
-    async function loadEvents() {
-      const res = await fetch('/api/events');
-      allEvents = await res.json();
-      renderEvents();
+// Загрузка событий
+async function loadEvents() {
+  console.log('🔄 Загрузка событий...');
+  
+  try {
+    const res = await fetch('/api/events');
+    const events = await res.json();
+    
+    console.log('📦 Загружено событий:', events.length);
+    
+    const container = document.getElementById('eventsList');
+    console.log('Контейнер:', container);
+    
+    if (!container) {
+      console.error(' Элемент #eventsList не найден!');
+      return;
     }
+    
+    if (!events || events.length === 0) {
+      container.innerHTML = '<p style="text-align: center; padding: 40px; color: var(--text-muted);">Нет событий</p>';
+      return;
+    }
+    
+    let html = '';
+    events.forEach(event => {
+      html += `
+        <div style="background: var(--bg-input); padding: 15px; border-radius: var(--radius); margin-bottom: 10px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <strong>${event.name}</strong><br>
+              <small style="color: var(--text-muted);">
+                ${event.event_start_date} — ${event.event_end_date}
+              </small>
+            </div>
+            <span class="badge badge-${event.status === 'active' ? 'success' : 'warning'}">
+              ${event.status}
+            </span>
+          </div>
+        </div>
+      `;
+    });
+    
+    container.innerHTML = html;
+    console.log('✅ События отображены');
+    
+  } catch (error) {
+    console.error('❌ Ошибка:', error);
+  }
+}
+
+// Вызываем при загрузке страницы
+window.addEventListener('DOMContentLoaded', () => {
+  console.log(' Страница загружена');
+  setTimeout(() => loadEvents(), 500);
+});
 
     function renderEvents() {
       const list = document.getElementById('eventsList');
