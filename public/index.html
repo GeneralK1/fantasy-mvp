@@ -547,88 +547,110 @@ async function addPlayer(playerId) {
 }
 
     // Загрузка команды
-    async function loadTeam() {
-      const res = await fetch(`/api/teams/${currentTeam.id}`);
-      const team = await res.json();
-      teamPlayers = team.players || [];
-
-      const males = teamPlayers.filter(p => p.gender === 'male').length;
-      const females = teamPlayers.filter(p => p.gender === 'female').length;
-      const total = teamPlayers.length;
-
-      document.getElementById('maleCount').textContent = males;
-      document.getElementById('femaleCount').textContent = females;
-      document.getElementById('totalCount').textContent = total;
-
-      const teamDiv = document.getElementById('currentTeam');
-      if (total === 0) {
-        teamDiv.innerHTML = '<p style="color: var(--text-muted); text-align: center; padding: 20px;">Команда пуста. Добавьте спортсменов ниже.</p>';
-      } else {
-        teamDiv.innerHTML = teamPlayers.map(p => `
-          <div class="team-slot">
-            <div class="player-info">
-              <h3>${p.full_name}</h3>
-              <p>${p.team} • ${p.rank || 'Без разряда'} • ${p.gender === 'male' ? '♂' : '♀'}</p>
-            </div>
-            ${!isConfirmed ? `<button class="btn btn-danger" onclick="removePlayer(${p.id})">Удалить</button>` : ''}
-          </div>
-        `).join('');
-      }
-
-      // Показываем кнопку подтверждения если 8 человек и не подтверждено
-      if (total === 8 && !isConfirmed) {
-        document.getElementById('confirmBlock').classList.remove('hidden');
-      } else {
-        document.getElementById('confirmBlock').classList.add('hidden');
-      }
-
-      // Показываем уведомление если подтверждено
-      if (isConfirmed) {
-        document.getElementById('confirmedNotice').classList.remove('hidden');
-      }
-    }
-
-// Показ модального окна
-function confirmTeam() {
-  document.getElementById('confirmModal').classList.remove('hidden');
-}
-
-// Закрытие модального окна
-function closeConfirmModal() {
-  document.getElementById('confirmModal').classList.add('hidden');
-}
-
-// Выполнение подтверждения
-// Выполнение подтверждения
-async function executeConfirmTeam() {
+    // Загрузка состава команды
+async function loadTeam() {
+  if (!currentTeam) return;
+  
   try {
-    const res = await fetch(`/api/teams/${currentTeam.id}/confirm`, {
-      method: 'POST'
-    });
-
-    if (res.ok) {
-      isConfirmed = true;
-      closeConfirmModal();
-      document.getElementById('confirmBlock').classList.add('hidden');
-      document.getElementById('confirmedNotice').classList.remove('hidden');
-      
-      // Показываем красивое уведомление
-      showSuccessNotification('Команда подтверждена! Состав зафиксирован.');
-      
-      loadTeam();
-      applyFilters();
-      
-      // ✅ Редирект на рейтинги ТОЛЬКО здесь (через 3 секунды)
-      setTimeout(() => {
-        window.location.href = '/rankings.html';
-      }, 3000);
-      
+    const res = await fetch(`/api/teams/${currentTeam.id}`);
+    const team = await res.json();
+    
+    const playersList = document.getElementById('teamPlayersList');
+    const confirmBlock = document.getElementById('confirmBlock');
+    const confirmedNotice = document.getElementById('confirmedNotice');
+    
+    if (!playersList) return;
+    
+    // Отображаем игроков команды
+    if (team.players && team.players.length > 0) {
+      playersList.innerHTML = team.players.map((player, index) => `
+        <div class="player-card" style="background: var(--bg-input); padding: 12px 16px; border-radius: var(--radius); margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <strong>${index + 1}. ${player.full_name}</strong>
+            <br>
+            <small style="color: var(--text-muted);">
+              ${player.birth_year} г.р. • ${player.team} • ${player.rank || 'без разряда'} • ${player.gender === 'male' ? '♂' : '♀'}
+            </small>
+          </div>
+          ${!isConfirmed ? `
+            <button class="btn btn-danger" onclick="removePlayer(${player.id})" style="padding: 6px 12px; font-size: 12px;">
+              ✕
+            </button>
+          ` : ''}
+        </div>
+      `).join('');
     } else {
-      const err = await res.json();
-      alert('Ошибка: ' + err.error);
+      playersList.innerHTML = `
+        <div style="text-align: center; padding: 30px; color: var(--text-muted);">
+          <div style="font-size: 48px; margin-bottom: 10px;">👥</div>
+          <p>Состав команды пуст. Добавьте спортсменов.</p>
+        </div>
+      `;
     }
+    
+    // Считаем количество мужчин и женщин
+    const males = team.players.filter(p => p.gender === 'male').length;
+    const females = team.players.filter(p => p.gender === 'female').length;
+    const totalPlayers = team.players.length;
+    
+    // Отображаем счётчик
+    const counter = document.getElementById('teamCounter');
+    if (counter) {
+      counter.innerHTML = `
+        <div style="background: var(--bg-input); padding: 15px; border-radius: var(--radius); margin-bottom: 15px;">
+          <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+            <span>♂ Мужчины:</span>
+            <strong style="color: ${males === 4 ? 'var(--success)' : 'var(--warning)'};">${males}/4</strong>
+          </div>
+          <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+            <span>♀ Женщины:</span>
+            <strong style="color: ${females === 4 ? 'var(--success)' : 'var(--warning)'};">${females}/4</strong>
+          </div>
+          <div style="display: flex; justify-content: space-between; padding-top: 8px; border-top: 1px solid var(--border);">
+            <span>Всего:</span>
+            <strong style="color: ${totalPlayers === 8 ? 'var(--success)' : 'var(--primary)'}; font-size: 18px;">${totalPlayers}/8</strong>
+          </div>
+        </div>
+      `;
+    }
+    
+    // ✅ ГЛАВНОЕ: Показываем кнопку подтверждения ТОЛЬКО когда состав полный
+    if (confirmBlock) {
+      if (totalPlayers === 8 && !isConfirmed) {
+        // Состав полный — показываем кнопку подтверждения
+        confirmBlock.classList.remove('hidden');
+        confirmBlock.innerHTML = `
+          <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 20px; border-radius: var(--radius); text-align: center; color: white; margin-top: 20px;">
+            <div style="font-size: 48px; margin-bottom: 10px;">✅</div>
+            <h3 style="margin: 0 0 10px 0; color: white;">Состав команды полный!</h3>
+            <p style="margin: 0 0 20px 0; opacity: 0.9;">
+              4 мужчины и 4 женщины. Можно подтверждать команду.
+            </p>
+            <button class="btn" style="background: white; color: #059669; font-weight: bold; padding: 14px 32px; font-size: 16px;" onclick="confirmTeam()">
+              ✔️ Подтвердить команду
+            </button>
+            <p style="margin: 10px 0 0 0; font-size: 12px; opacity: 0.8;">
+              ️ После подтверждения состав нельзя будет изменить
+            </p>
+          </div>
+        `;
+      } else if (isConfirmed) {
+        // Команда уже подтверждена
+        confirmBlock.classList.add('hidden');
+        if (confirmedNotice) {
+          confirmedNotice.classList.remove('hidden');
+        }
+      } else {
+        // Состав неполный — скрываем кнопку
+        confirmBlock.classList.add('hidden');
+      }
+    }
+    
+    // Обновляем фильтры
+    applyFilters();
+    
   } catch (error) {
-    alert('Ошибка: ' + error.message);
+    console.error('Ошибка загрузки команды:', error);
   }
 }
 
@@ -676,6 +698,54 @@ function showSuccessNotification(message) {
       await loadTeam();
       applyFilters();
     }
+
+    // Показать модальное окно подтверждения
+function confirmTeam() {
+  if (isConfirmed) {
+    alert('Команда уже подтверждена!');
+    return;
+  }
+  
+  // Показываем модальное окно
+  const modal = document.getElementById('confirmModal');
+  if (modal) {
+    modal.classList.remove('hidden');
+    modal.style.display = 'flex';
+  } else {
+    // Если модального окна нет — подтверждаем сразу
+    if (confirm('Вы уверены, что хотите подтвердить команду?\n\nПосле подтверждения состав нельзя будет изменить!')) {
+      executeConfirmTeam();
+    }
+  }
+}
+
+// Выполнение подтверждения
+async function executeConfirmTeam() {
+  try {
+    const res = await fetch(`/api/teams/${currentTeam.id}/confirm`, {
+      method: 'POST'
+    });
+    
+    if (res.ok) {
+      isConfirmed = true;
+      
+      // Закрываем модальное окно
+      const modal = document.getElementById('confirmModal');
+      if (modal) {
+        modal.classList.add('hidden');
+        modal.style.display = 'none';
+      }
+      
+      showNotification('✅ Команда подтверждена! Состав зафиксирован.');
+      loadTeam();
+    } else {
+      const err = await res.json();
+      alert('Ошибка: ' + err.error);
+    }
+  } catch (error) {
+    alert('Ошибка: ' + error.message);
+  }
+}
 
     // Запуск
     document.addEventListener('DOMContentLoaded', initVK);
