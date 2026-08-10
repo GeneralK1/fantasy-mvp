@@ -1553,14 +1553,12 @@ app.get('/api/admin/backups', (req, res) => {
 const uploadDb = multer({ storage: multer.memoryStorage() });
 
 // Восстановление из бэкапа
+// Восстановление из бэкапа (без перезагрузки сервера)
 app.post('/api/admin/restore', uploadDb.single('file'), (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'Файл не загружен' });
     }
-    
-    // Закрываем текущее соединение с БД
-    db.close();
     
     // Записываем бэкап поверх текущей БД
     fs.writeFileSync('./data/fantasy.db', req.file.buffer);
@@ -1568,16 +1566,10 @@ app.post('/api/admin/restore', uploadDb.single('file'), (req, res) => {
     console.log('✅ База данных восстановлена из бэкапа');
     
     // Отправляем ответ клиенту
-    res.json({ success: true, message: 'База данных восстановлена. Перезагрузка...' });
-    
-    // Перезапускаем сервер через 2 секунды через child_process
-    setTimeout(() => {
-      const { spawn } = require('child_process');
-      spawn('bash', ['-c', 'pkill -9 -f "node server.js"; sleep 1; cd /root/fantasy-mvp && node server.js > server.log 2>&1 &'], {
-        detached: true,
-        stdio: 'ignore'
-      });
-    }, 2000);
+    res.json({ 
+      success: true, 
+      message: 'База данных восстановлена! Пожалуйста, перезапустите сервер вручную через SSH: pkill -9 -f node && cd /root/fantasy-mvp && node server.js > server.log 2>&1 &'
+    });
     
   } catch (error) {
     console.error('Ошибка восстановления:', error);

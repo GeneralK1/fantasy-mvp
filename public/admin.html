@@ -810,7 +810,6 @@ async function restoreBackup() {
 
 async function executeRestore() {
   closeRestoreModal();
-  
   const fileInput = document.getElementById('restoreFile');
   const file = fileInput.files[0];
   
@@ -826,8 +825,7 @@ async function executeRestore() {
     const result = await res.json();
     
     if (res.ok) {
-      showNotification('✅ База данных восстановлена! Перезагрузка...');
-      setTimeout(() => location.reload(), 2000);
+      alert('✅ База данных восстановлена!\n\n⚠️ Теперь нужно перезапустить сервер вручную через SSH:\n\npkill -9 -f node\ncd /root/fantasy-mvp\nnode server.js > server.log 2>&1 &');
     } else {
       alert('Ошибка: ' + result.error);
     }
