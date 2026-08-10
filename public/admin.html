@@ -708,6 +708,193 @@ function showSuccessNotification(message) {
   document.body.appendChild(notification);
   setTimeout(() => notification.remove(), 3000);
 }
+// === РЕЗЕРВНОЕ КОПИРОВАНИЕ ===
+
+async function createBackup() {
+  try {
+    const res = await fetch('/api/admin/backup', { method: 'POST' });
+    const result = await res.json();
+    
+    if (res.ok) {
+      showNotification(`✅ Бэкап создан: ${result.file}`);
+      loadBackupList();
+    } else {
+      alert('Ошибка: ' + result.error);
+    }
+  } catch (error) {
+    alert('Ошибка: ' + error.message);
+  }
+}
+
+async function downloadBackup() {
+  try {
+    const res = await fetch('/api/admin/backup/latest');
+    if (res.ok) {
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'fantasy_backup.db';
+      a.click();
+      window.URL.revokeObjectURL(url);
+      showNotification('✅ Бэкап скачан!');
+    } else {
+      alert('Нет доступных бэкапов');
+    }
+  } catch (error) {
+    alert('Ошибка: ' + error.message);
+  }
+}
+
+function showRestoreModal() {
+  document.getElementById('restoreModal').classList.remove('hidden');
+}
+
+function closeRestoreModal() {
+  document.getElementById('restoreModal').classList.add('hidden');
+}
+
+async function restoreBackup() {
+  const fileInput = document.getElementById('restoreFile');
+  if (!fileInput.files[0]) {
+    alert('Выберите файл бэкапа');
+    return;
+  }
+  showRestoreModal();
+}
+
+async function executeRestore() {
+  closeRestoreModal();
+  
+  const fileInput = document.getElementById('restoreFile');
+  const file = fileInput.files[0];
+  
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    const res = await fetch('/api/admin/restore', {
+      method: 'POST',
+      body: formData
+    });
+    
+    const result = await res.json();
+    
+    if (res.ok) {
+      showNotification('✅ База данных восстановлена! Перезагрузка...');
+      setTimeout(() => location.reload(), 2000);
+    } else {
+      alert('Ошибка: ' + result.error);
+    }
+  } catch (error) {
+    alert('Ошибка: ' + error.message);
+  }
+}
+
+async function loadBackupList() {
+  try {
+    const res = await fetch('/api/admin/backups');
+    const backups = await res.json();
+    
+    const container = document.getElementById('backupList');
+    
+    if (!backups || backups.length === 0) {
+      container.innerHTML = '<p style="color: rgba(255,255,255,0.8);">Нет доступных бэкапов</p>';
+      return;
+    }
+    
+    let html = '<h3 style="color: white; margin-bottom: 10px; font-size: 14px;"> Доступные бэкапы:</h3>';
+    html += '<div style="max-height: 200px; overflow-y: auto;">';
+    
+    backups.forEach(backup => {
+      html += `
+        <div style="background: rgba(255,255,255,0.1); padding: 10px; border-radius: 6px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <div style="color: white; font-size: 13px;">${backup.name}</div>
+            <div style="color: rgba(255,255,255,0.7); font-size: 11px;">${backup.size} • ${backup.date}</div>
+          </div>
+          <button class="btn" style="background: white; color: #0284c7; padding: 6px 12px; font-size: 12px;" onclick="downloadSpecificBackup('${backup.name}')">
+            ⬇️
+          </button>
+        </div>
+      `;
+    });
+    
+    html += '</div>';
+    container.innerHTML = html;
+  } catch (error) {
+    console.error('Ошибка загрузки списка бэкапов:', error);
+  }
+}
+
+async function downloadSpecificBackup(filename) {
+  try {
+    const res = await fetch(`/api/admin/backup/${encodeURIComponent(filename)}`);
+    if (res.ok) {
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      window.URL.revokeObjectURL(url);
+    }
+  } catch (error) {
+    alert('Ошибка: ' + error.message);
+  }
+}
+
+// Загружаем список бэкапов при открытии админки
+if (document.getElementById('backupList')) {
+  loadBackupList();
+}
   </script>
+<!-- Секция резервного копирования -->
+<div class="card" style="background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%); color: white;">
+  <h2 style="color: white; margin-bottom: 15px;">💾 Резервное копирование</h2>
+  <p style="color: rgba(255,255,255,0.9); margin-bottom: 20px;">
+    Создание и восстановление резервных копий базы данных
+  </p>
+  
+  <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px;">
+    <button class="btn" style="background: white; color: #0284c7; font-weight: bold;" onclick="createBackup()">
+      📦 Создать бэкап сейчас
+    </button>
+    <button class="btn" style="background: white; color: #0284c7; font-weight: bold;" onclick="downloadBackup()">
+      ⬇️ Скачать последний бэкап
+    </button>
+  </div>
+
+  <div style="background: rgba(255,255,255,0.15); padding: 15px; border-radius: 8px;">
+    <h3 style="color: white; margin-bottom: 10px; font-size: 16px;">🔄 Восстановление из бэкапа</h3>
+    <p style="color: rgba(255,255,255,0.9); font-size: 13px; margin-bottom: 15px;">
+      ⚠️ Текущая база данных будет ЗАМЕНЕНА на выбранную копию!
+    </p>
+    <input type="file" id="restoreFile" accept=".db" class="form-control" style="max-width: 400px; margin-bottom: 10px;">
+    <button class="btn" style="background: #ef4444; color: white; font-weight: bold;" onclick="restoreBackup()">
+      ⚠️ Восстановить из бэкапа
+    </button>
+  </div>
+
+  <div id="backupList" style="margin-top: 20px;"></div>
+</div>
+
+<!-- Модальное окно подтверждения восстановления -->
+<div id="restoreModal" class="modal-overlay hidden">
+  <div class="modal" style="max-width: 500px; text-align: center;">
+    <div style="font-size: 64px; margin-bottom: 20px;">⚠️</div>
+    <h2 style="color: var(--danger); margin-bottom: 15px;">Подтверждение восстановления</h2>
+    <p style="color: var(--text-secondary); margin-bottom: 20px; line-height: 1.6;">
+      Вы собираетесь <strong>ЗАМЕНИТЬ</strong> текущую базу данных на резервную копию.<br><br>
+      <span style="color: var(--danger); font-weight: 600;">
+        ⚠️ Все текущие данные будут УТЕРЯНЫ!
+      </span>
+    </p>
+    <div style="display: flex; gap: 12px; justify-content: center;">
+      <button class="btn btn-secondary" onclick="closeRestoreModal()">Отмена</button>
+      <button class="btn btn-danger" onclick="executeRestore()">Восстановить</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>

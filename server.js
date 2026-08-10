@@ -1454,6 +1454,130 @@ app.post('/api/events/:eventId/import-scores', upload.single('file'), (req, res)
   }
 });
 
+const { execSync } = require('child_process');
+
+// Создание бэкапа
+app.post('/api/admin/backup', (req, res) => {
+  try {
+    const backupDir = './backups';
+    if (!fs.existsSync(backupDir)) {
+      fs.mkdirSync(backupDir, { recursive: true });
+    }
+    
+    const date = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    const backupFile = `${backupDir}/fantasy_${date}.db`;
+    
+    // Используем sqlite3 .backup для консистентного снимка
+    db.prepare(`VACUUM INTO '${backupFile}'`).run();
+    
+    console.log(`✅ Бэкап создан: ${backupFile}`);
+    res.json({ success: true, file: backupFile });
+  } catch (error) {
+    console.error('Ошибка бэкапа:', error);
+    res.status(500).json({ error: 'Ошибка: ' + error.message });
+  }
+});
+
+// Скачать последний бэкап
+app.get('/api/admin/backup/latest', (req, res) => {
+  try {
+    const backupDir = './backups';
+    if (!fs.existsSync(backupDir)) {
+      return res.status(404).json({ error: 'Нет бэкапов' });
+    }
+    
+    const files = fs.readdirSync(backupDir)
+      .filter(f => f.endsWith('.db'))
+      .sort()
+      .reverse();
+    
+    if (files.length === 0) {
+      return res.status(404).json({ error: 'Нет бэкапов' });
+    }
+    
+    const latestFile = `${backupDir}/${files[0]}`;
+    res.download(latestFile, 'fantasy_backup.db');
+  } catch (error) {
+    console.error('Ошибка:', error);
+    res.status(500).json({ error: 'Ошибка: ' + error.message });
+  }
+});
+
+// Скачать конкретный бэкап
+app.get('/api/admin/backup/:filename', (req, res) => {
+  try {
+    const filename = req.params.filename;
+    const filePath = `./backups/${filename}`;
+    
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ error: 'Файл не найден' });
+    }
+    
+    res.download(filePath, filename);
+  } catch (error) {
+    console.error('Ошибка:', error);
+    res.status(500).json({ error: 'Ошибка: ' + error.message });
+  }
+});
+
+// Список бэкапов
+app.get('/api/admin/backups', (req, res) => {
+  try {
+    const backupDir = './backups';
+    if (!fs.existsSync(backupDir)) {
+      return res.json([]);
+    }
+    
+    const files = fs.readdirSync(backupDir)
+      .filter(f => f.endsWith('.db'))
+      .sort()
+      .reverse()
+      .map(f => {
+        const stats = fs.statSync(`${backupDir}/${f}`);
+        return {
+          name: f,
+          size: (stats.size / 1024).toFixed(1) + ' KB',
+          date: new Date(stats.mtime).toLocaleString('ru-RU')
+        };
+      });
+    
+    res.json(files);
+  } catch (error) {
+    console.error('Ошибка:', error);
+    res.status(500).json({ error: 'Ошибка: ' + error.message });
+  }
+});
+
+// Восстановление из бэкапа
+const uploadDb = multer({ storage: multer.memoryStorage() });
+
+app.post('/api/admin/restore', uploadDb.single('file'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'Файл не загружен' });
+    }
+    
+    // Закрываем текущее соединение с БД
+    db.close();
+    
+    // Записываем бэкап поверх текущей БД
+    fs.writeFileSync('./data/fantasy.db', req.file.buffer);
+    
+    console.log('✅ База данных восстановлена из бэкапа');
+    
+    // Перезапускаем процесс для переподключения к БД
+    res.json({ success: true, message: 'База данных восстановлена. Перезагрузка...' });
+    
+    // Перезапускаем сервер через 1 секунду
+    setTimeout(() => {
+      process.exit(0);
+    }, 1000);
+    
+  } catch (error) {
+    console.error('Ошибка восстановления:', error);
+    res.status(500).json({ error: 'Ошибка: ' + error.message });
+  }
+});
 app.listen(PORT, () => {
   console.log('✅ Сервер запущен: http://localhost:' + PORT);
   console.log('⚙️ Админ-панель: http://localhost:' + PORT + '/admin.html');
