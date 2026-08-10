@@ -6,6 +6,17 @@
   <title>Рейтинги - Фэнтези Лига</title>
   <script src="https://unpkg.com/@vkontakte/vk-bridge/dist/browser.min.js"></script>
   <link rel="stylesheet" href="style.css">
+  <style>
+    .scrollable-rating {
+      max-height: 400px;
+      overflow-y: auto;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+    }
+    .scrollable-rating table {
+      margin: 0;
+    }
+  </style>
 </head>
 <body>
   <div class="container">
@@ -28,17 +39,17 @@
         </nav>
       </div>
 
-      <!-- Общий рейтинг спортсменов -->
-      <div class="card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+      <!-- Рейтинги команд по событиям (сначала) -->
+      <div id="eventRankings"></div>
+
+      <!-- Общий рейтинг спортсменов (внизу) -->
+      <div class="card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; margin-top: 20px;">
         <h2 style="color: white; margin-bottom: 20px;">🏆 Общий рейтинг спортсменов</h2>
         <p style="color: rgba(255,255,255,0.9); margin-bottom: 20px;">
           Сумма очков по всем активным событиям
         </p>
-        <div id="overallRating"></div>
+        <div id="overallRating" class="scrollable-rating" style="background: rgba(255,255,255,0.95); border-radius: 8px; color: var(--text-primary);"></div>
       </div>
-
-      <!-- Рейтинги по событиям -->
-      <div id="eventRankings"></div>
     </div>
   </div>
 
@@ -89,77 +100,8 @@
     }
 
     async function loadAllRankings() {
-      await loadOverallRating();
       await loadEventRankings();
-    }
-
-    // Загрузка общего рейтинга спортсменов
-    async function loadOverallRating() {
-      try {
-        const res = await fetch('/api/players/overall-rating');
-        const rating = await res.json();
-
-        const container = document.getElementById('overallRating');
-        
-        if (!rating || rating.length === 0) {
-          container.innerHTML = `
-            <div style="text-align: center; padding: 30px; background: rgba(255,255,255,0.1); border-radius: 12px;">
-              <div style="font-size: 48px; margin-bottom: 10px;"></div>
-              <p style="color: rgba(255,255,255,0.9);">Пока нет начисленных очков</p>
-            </div>
-          `;
-          return;
-        }
-
-        let html = `
-          <div class="table-wrapper">
-            <table>
-              <thead>
-                <tr>
-                  <th>Место</th>
-                  <th>Спортсмен</th>
-                  <th>Регион</th>
-                  <th>Разряд</th>
-                  <th>Событий</th>
-                  <th>Очки</th>
-                </tr>
-              </thead>
-              <tbody>
-        `;
-
-        rating.forEach((player, index) => {
-          let place = index + 1;
-          let placeDisplay = place;
-          if (place === 1) placeDisplay = '🥇 1';
-          else if (place === 2) placeDisplay = '🥈 2';
-          else if (place === 3) placeDisplay = '🥉 3';
-
-          const rowStyle = place === 1 ? 'background: rgba(255,215,0,0.2);' : '';
-
-          html += `
-            <tr style="${rowStyle}">
-              <td><strong style="font-size: 18px;">${placeDisplay}</strong></td>
-              <td>
-                <strong>${player.full_name}</strong>
-                <br>
-                <small style="opacity: 0.8;">${player.birth_year} г.р. • ${player.gender === 'male' ? '♂' : '♀'}</small>
-              </td>
-              <td>${player.team}</td>
-              <td><span class="badge badge-primary">${player.rank || '-'}</span></td>
-              <td>${player.events_count}</td>
-              <td>
-                <strong style="font-size: 20px;">${player.total_points}</strong>
-              </td>
-            </tr>
-          `;
-        });
-
-        html += '</tbody></table></div>';
-        container.innerHTML = html;
-
-      } catch (error) {
-        console.error('Ошибка загрузки общего рейтинга:', error);
-      }
+      await loadOverallRating();
     }
 
     // Загрузка рейтингов по событиям
@@ -202,7 +144,7 @@
 
     function renderEventRanking(event, teams) {
       const statusBadge = event.status === 'active' 
-        ? '<span class="badge badge-success">🔥 Активно</span>'
+        ? '<span class="badge badge-success"> Активно</span>'
         : '<span class="badge badge-info">⏸ Завершено</span>';
 
       let html = `
@@ -212,7 +154,7 @@
             ${statusBadge}
           </div>
           <p style="color: var(--text-secondary); margin-bottom: 5px;">
-            📅 ${formatDate(event.event_start_date)} — ${formatDate(event.event_end_date)}
+             ${formatDate(event.event_start_date)} — ${formatDate(event.event_end_date)}
           </p>
       `;
 
@@ -250,7 +192,7 @@
           let placeDisplay = place;
           if (place === 1) placeDisplay = '🥇 1';
           else if (place === 2) placeDisplay = '🥈 2';
-          else if (place === 3) placeDisplay = ' 3';
+          else if (place === 3) placeDisplay = '🥉 3';
           
           const rowStyle = place === 1 ? 'background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);' : '';
           
@@ -270,6 +212,73 @@
 
       html += '</div>';
       return html;
+    }
+
+    // Загрузка общего рейтинга спортсменов
+    async function loadOverallRating() {
+      try {
+        const res = await fetch('/api/players/overall-rating');
+        const rating = await res.json();
+
+        const container = document.getElementById('overallRating');
+        
+        if (!rating || rating.length === 0) {
+          container.innerHTML = `
+            <div style="text-align: center; padding: 30px; color: var(--text-muted);">
+              <div style="font-size: 48px; margin-bottom: 10px;">🏆</div>
+              <p>Пока нет начисленных очков</p>
+            </div>
+          `;
+          return;
+        }
+
+        let html = `
+          <div class="table-wrapper" style="margin: 0;">
+            <table>
+              <thead>
+                <tr>
+                  <th>Место</th>
+                  <th>Спортсмен</th>
+                  <th>Регион</th>
+                  <th>Разряд</th>
+                  <th>Событий</th>
+                  <th>Очки</th>
+                </tr>
+              </thead>
+              <tbody>
+        `;
+
+        rating.forEach((player, index) => {
+          let place = index + 1;
+          let placeDisplay = place;
+          if (place === 1) placeDisplay = '🥇 1';
+          else if (place === 2) placeDisplay = '🥈 2';
+          else if (place === 3) placeDisplay = '🥉 3';
+
+          const rowStyle = place === 1 ? 'background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);' : '';
+
+          html += `
+            <tr style="${rowStyle}">
+              <td><strong style="font-size: 18px;">${placeDisplay}</strong></td>
+              <td>
+                <strong>${player.full_name}</strong>
+                <br>
+                <small style="color: var(--text-muted);">${player.birth_year} г.р. • ${player.gender === 'male' ? '♂' : '♀'}</small>
+              </td>
+              <td>${player.team}</td>
+              <td><span class="badge badge-primary">${player.rank || '-'}</span></td>
+              <td>${player.events_count}</td>
+              <td><strong style="font-size: 18px; color: var(--primary);">${player.total_points}</strong></td>
+            </tr>
+          `;
+        });
+
+        html += '</tbody></table></div>';
+        container.innerHTML = html;
+
+      } catch (error) {
+        console.error('Ошибка загрузки общего рейтинга:', error);
+      }
     }
 
     window.addEventListener('beforeunload', () => {

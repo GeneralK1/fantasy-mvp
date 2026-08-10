@@ -1342,6 +1342,117 @@ app.post('/api/admin/reset-all', (req, res) => {
     res.status(500).json({ error: 'Ошибка: ' + error.message });
   }
 });
+// Импорт очков из CSV файла
+const multer = require('multer');
+const upload = multer({ storage: multer.memoryStorage() });
+
+app.post('/api/events/:eventId/import-scores', upload.single('file'), (req, res) => {
+  const eventId = req.params.eventId;
+  
+  if (!req.file) {
+    return res.status(400).json({ error: 'Файл не загружен' });
+  }
+
+  try {
+    const content = req.file.buffer.toString('utf-8');
+    const lines = content.split('\n').filter(line => line.trim());
+    
+    let imported = 0;
+    let errors = 0;
+    
+    // Определяем формат (с заголовком или без)
+    const firstLine = lines[0].toLowerCase();
+    const hasHeader = firstLine.includes('full_name') || firstLine.includes('points');
+    const startIndex = hasHeader ? 1 : 0;
+
+    for (let i = startIndex; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line) continue;
+
+      // Разделяем по запятой или точке с запятой
+      const parts = line.split(/;|,/).map(p => p.trim());
+      
+      if (parts.length < 2) {
+        errors++;
+        continue;
+      }
+
+      let fullName, points;
+      
+      if (parts.length === 2) {
+        // Формат: full_name,points
+        fullName = parts[0];
+        points = parseInt(parts[1]);
+      } else {
+        // Формат: team,full_name,points
+        fullName = parts[1];
+        points = parseInt(parts[2]);
+      }
+
+      if (isNaN(points)) {
+        errors++;
+        continue;
+      }
+
+      // Ищем спортсмена по имени
+      const player = db.prepare(`
+        SELECT p.id FROM players p
+        JOIN team_players tp ON p.id = tp.player_id
+        JOIN teams t ON tp.team_id = t.id
+        WHERE t.event_id = ? AND p.full_name = ?
+      `).get(eventId, fullName);
+
+      if (player) {
+        db.prepare(`
+          INSERT OR REPLACE INTO event_results (event_id, player_id, points)
+          VALUES (?, ?, ?)
+        `).run(eventId, player.id, points);
+        imported++;
+      } else {
+        errors++;
+      }
+    }
+
+    // Пересчитываем очки всех команд
+    const teams = db.prepare(
+      'SELECT DISTINCT t.id FROM teams t JOIN team_players tp ON t.id = tp.team_id WHERE t.event_id = ?'
+    ).all(eventId);
+
+    teams.forEach(team => {
+      const teamPlayers = db.prepare(
+        'SELECT player_id FROM team_players WHERE team_id = ?'
+      ).all(team.id);
+
+      let teamTotal = 0;
+      teamPlayers.forEach(tp => {
+        const result = db.prepare(
+          'SELECT points FROM event_results WHERE event_id = ? AND player_id = ?'
+        ).get(eventId, tp.player_id);
+        if (result) teamTotal += result.points || 0;
+      });
+
+      const existing = db.prepare(
+        'SELECT id FROM event_teams WHERE event_id = ? AND team_id = ?'
+      ).get(eventId, team.id);
+
+      if (existing) {
+        db.prepare(
+          'UPDATE event_teams SET total_points = ? WHERE event_id = ? AND team_id = ?'
+        ).run(teamTotal, eventId, team.id);
+      } else {
+        db.prepare(
+          'INSERT INTO event_teams (event_id, team_id, total_points) VALUES (?, ?, ?)'
+        ).run(eventId, team.id, teamTotal);
+      }
+    });
+
+    console.log(`✅ Импортировано ${imported} очков, ${errors} ошибок`);
+    res.json({ imported, errors });
+  } catch (error) {
+    console.error('Ошибка импорта:', error);
+    res.status(500).json({ error: 'Ошибка: ' + error.message });
+  }
+});
 
 app.listen(PORT, () => {
   console.log('✅ Сервер запущен: http://localhost:' + PORT);
