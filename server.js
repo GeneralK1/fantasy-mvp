@@ -4,7 +4,6 @@ const cors = require('cors');
 const path = require('path');
 const db = require('./database');
 const fs = require('fs');        // ← ДОБАВИТЬ
-const path = require('path');    // ← ДОБАВИТЬ
 const multer = require('multer'); // ← УБЕДИТЬСЯ, ЧТО ЕСТЬ
 
 
@@ -1346,7 +1345,6 @@ app.post('/api/admin/reset-all', (req, res) => {
   }
 });
 // Импорт очков из CSV файла
-const multer = require('multer');
 const upload = multer({ storage: multer.memoryStorage() });
 
 app.post('/api/events/:eventId/import-scores', upload.single('file'), (req, res) => {
